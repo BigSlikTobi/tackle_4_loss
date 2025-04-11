@@ -6,11 +6,11 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
 
 1.  [Overview](#overview)
 2.  [Prerequisites](#prerequisites)
-3.  [Contributing] (#contibuting)
-3.  [Getting Started](#getting-started)
-4.  [Project Structure](#project-structure)
-5.  [Core Technologies & Packages](#core-technologies--packages)
-6.  [Architecture & Key Concepts](#architecture--key-concepts)
+3.  [Contributing](#contributing)
+4.  [Getting Started](#getting-started)
+5.  [Project Structure](#project-structure)
+6.  [Core Technologies & Packages](#core-technologies--packages)
+7.  [Architecture & Key Concepts](#architecture--key-concepts)
     *   [State Management (Riverpod)](#state-management-riverpod)
     *   [Backend Integration (Supabase)](#backend-integration-supabase)
     *   [Navigation (Adaptive)](#navigation-adaptive)
@@ -19,10 +19,10 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
     *   [Localization](#localization)
     *   [Local Persistence](#local-persistence)
     *   [Responsiveness](#responsiveness)
-7.  [Implemented Features](#implemented-features)
-8.  [Running the App](#running-the-app)
-9.  [Backend Notes](#backend-notes)
-10. [Potential Next Steps](#potential-next-steps)
+8.  [Implemented Features](#implemented-features)
+9.  [Running the App](#running-the-app)
+10. [Backend Notes](#backend-notes)
+11. [Potential Next Steps](#potential-next-steps)
 
 ## Overview
 
