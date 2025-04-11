@@ -6,7 +6,7 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
 
 1.  [Overview](#overview)
 2.  [Prerequisites](#prerequisites)
-3.  [Contribution] (#Contibution)
+3.  [Contributing] (#contibuting)
 3.  [Getting Started](#getting-started)
 4.  [Project Structure](#project-structure)
 5.  [Core Technologies & Packages](#core-technologies--packages)
