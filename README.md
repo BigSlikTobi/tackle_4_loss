@@ -1,7 +1,4 @@
---- START OF FILE README.md ---
-
 # Tackle4Loss
-
 This repository contains the Flutter frontend application for Tackle4Loss, an American Football news application built for iOS, Android, and Web platforms.
 
 ## Table of Contents
