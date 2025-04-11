@@ -1,5 +1,3 @@
-//TODO: language picker for mobile layout is missing
-
 import 'dart:async';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';

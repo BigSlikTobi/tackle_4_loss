@@ -37,7 +37,6 @@ class TeamArticleList extends ConsumerWidget {
         } else {
           // Data loaded successfully
           final articles = snapshot.data!.articles;
-          // TODO: Implement pagination for team articles later if needed
           return ListView.builder(
             itemCount: articles.length,
             itemBuilder: (context, index) {

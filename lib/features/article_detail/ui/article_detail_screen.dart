@@ -23,18 +23,12 @@ class ArticleDetailScreen extends StatelessWidget {
           IconButton(
             icon: const Icon(Icons.share_outlined),
             onPressed: () {
-              // TODO: Implement sharing
-              debugPrint(
-                'Share article $articleId',
-              ); // Use debugPrint instead of print
+              debugPrint('Share article $articleId');
             },
           ),
         ],
       ),
-      body: Center(
-        child: Text('Showing details for Article ID: $articleId'),
-        // TODO: Fetch and display full article content here
-      ),
+      body: Center(child: Text('Showing details for Article ID: $articleId')),
     );
   }
 }

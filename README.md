@@ -86,6 +86,7 @@ Contributions are welcome! Whether it's fixing bugs, improving documentation, ad
 *   Feel free to **open an issue** if you find a bug or want to suggest a new feature.
 *   Check the existing issues to see if your idea or problem has already been discussed.
 
+Known issues and required clean_ups can be found [here](ToDos.md)
 We appreciate your help in making Tackle4Loss better!
 
 ## Project Structure
