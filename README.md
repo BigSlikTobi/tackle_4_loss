@@ -93,40 +93,32 @@ We appreciate your help in making Tackle4Loss better!
 
 The project follows a **Feature-First** architecture within the `lib` directory:
 
-lib/
-|-- app.dart # Root MyApp widget, MaterialApp setup
-|-- main.dart # App entry point, Supabase/DotEnv initialization
-|
-|-- core/ # Shared code across features
-| |-- constants/ # App-wide constants (e.g., team_constants.dart)
-| |-- models/ # Shared data models (if any)
-| |-- navigation/ # Navigation setup (NavItem, MainNavigationWrapper)
-| |-- providers/ # Shared Riverpod providers (e.g., locale_provider.dart, navigation_provider.dart)
-| |-- services/ # Shared services (e.g., preference_service.dart)
-| |-- theme/ # Global theme data (app_colors.dart, app_theme.dart)
-| |-- utils/ # Utility functions
-| |-- widgets/ # Common reusable widgets (e.g., GlobalAppBar, LoadingIndicator)
-|
-|-- features/ # Feature modules
-| |-- news_feed/
-| | |-- data/ # Models (ArticlePreview), Services (NewsFeedService)
-| | |-- logic/ # Riverpod Providers (news_feed_provider.dart)
-| | |-- ui/ # Screens (NewsFeedScreen), Widgets (ArticleListItem, HeadlineStoryCard)
-| |
-| |-- my_team/
-| | |-- ui/ # Screens (MyTeamScreen), Widgets (UpcomingGamesCard, InjuryReportCard, TeamHuddleSection, TeamSelectionDropdown)
-| |
-| |-- article_detail/ # Placeholder for future implementation
-| | |-- ui/ # Screens (ArticleDetailScreen)
-| |
-| |-- schedule/ # Placeholder
-| | |-- ui/ # Screens (ScheduleScreen)
-| |
-| |-- more/ # Placeholder
-| | |-- ui/ # Screens (MoreScreen)
-|
-|-- models/ # (Alternative location for ALL models if preferred over feature folders)
-
+*   `lib/`
+    *   `app.dart`: Root `MyApp` widget, `MaterialApp` setup.
+    *   `main.dart`: App entry point, Supabase/DotEnv initialization.
+    *   `core/`: Shared code across features.
+        *   `constants/`: App-wide constants (e.g., `team_constants.dart`).
+        *   `models/`: Shared data models (if any).
+        *   `navigation/`: Navigation setup (`NavItem`, `MainNavigationWrapper`).
+        *   `providers/`: Shared Riverpod providers (e.g., `locale_provider.dart`, `navigation_provider.dart`).
+        *   `services/`: Shared services (e.g., `preference_service.dart`).
+        *   `theme/`: Global theme data (`app_colors.dart`, `app_theme.dart`).
+        *   `utils/`: Utility functions.
+        *   `widgets/`: Common reusable widgets (e.g., `GlobalAppBar`, `LoadingIndicator`).
+    *   `features/`: Feature modules.
+        *   `news_feed/`
+            *   `data/`: Models (`ArticlePreview`), Services (`NewsFeedService`).
+            *   `logic/`: Riverpod Providers (`news_feed_provider.dart`).
+            *   `ui/`: Screens (`NewsFeedScreen`), Widgets (`ArticleListItem`, `HeadlineStoryCard`).
+        *   `my_team/`
+            *   `ui/`: Screens (`MyTeamScreen`), Widgets (`UpcomingGamesCard`, `InjuryReportCard`, `TeamHuddleSection`, `TeamSelectionDropdown`).
+        *   `article_detail/`: Placeholder for future implementation.
+            *   `ui/`: Screens (`ArticleDetailScreen`).
+        *   `schedule/`: Placeholder.
+            *   `ui/`: Screens (`ScheduleScreen`).
+        *   `more/`: Placeholder.
+            *   `ui/`: Screens (`MoreScreen`).
+    *   `models/`: (Alternative location for ALL models if preferred over feature folders).
 
 ## Core Technologies & Packages
 
