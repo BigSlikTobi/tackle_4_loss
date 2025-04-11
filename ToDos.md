@@ -3,8 +3,6 @@
 ## Table of Contents
 - [Task: Create Global Language Selection Control for Adaptive UI](#task-create-global-language-selection-control-for-adaptive-ui)
 - [Task: Resolve Persistent 404 Asset Loading Error on Web/Desktop](#task-resolve-persistent-404-asset-loading-error-on-webdesktop)
-- [Task: Implement Article Sharing Functionality](#task-implement-article-sharing-functionality)
-- [Task: Fetch and Display Full Article Content on Detail Screen](#task-fetch-and-display-full-article-content-on-detail-screen)
 - [Task: Implement Pagination for Team-Specific Article List](#task-implement-pagination-for-team-specific-article-list)
 
 ## Task: Create Global Language Selection Control for Adaptive UI
@@ -57,67 +55,6 @@ Identify and fix the root cause of the duplicated `assets/assets/` path when loa
 *   Selecting a team via the "My Team" feature (or dropdown) correctly displays the team's logo in the `TeamHuddleSection`, `UpcomingGamesCard`, and `InjuryReportCard` without any 404 errors in the console.
 *   The path used to load the asset in the browser's network inspector (or Flutter logs) is correctly formatted (e.g., `assets/logos/some_team_name.png`).
 *   The fix does not introduce regressions in other parts of the application.
-
-## Task: Implement Article Sharing Functionality
-
-**Problem:**
-The `ArticleDetailScreen` currently includes a placeholder "Share" icon button in its `AppBar`. Tapping this button only prints a debug message to the console (`debugPrint('Share article $articleId')`). There is no actual functionality implemented to allow users to share the displayed article with other apps or services.
-
-**Goal:**
-Implement native sharing functionality for the currently displayed article. When the user taps the share icon, the device's standard sharing dialog/sheet should appear, allowing the user to share relevant information about the article (e.g., headline and URL) to other installed applications (like messaging apps, social media, email, etc.).
-
-**Possible Approaches & Considerations:**
-*   **Use the `share_plus` Package:** This is the most common and recommended Flutter package for invoking the native platform sharing UI.
-    *   Add `share_plus` to `pubspec.yaml`.
-    *   In the `onPressed` callback of the share `IconButton`:
-        *   Fetch necessary article details (at minimum the URL, likely also the headline). This might require accessing the article data loaded by the screen (see related TODO for data fetching).
-        *   Construct the content to be shared (e.g., a string combining the headline and URL).
-        *   Call `Share.share(shareContent, subject: articleHeadline);`. The `subject` is often used for email subjects.
-*   **Data to Share:** Determine the best information to share. Usually, this includes:
-    *   The article's headline (as the `subject` or part of the main text).
-    *   The canonical URL of the article (fetched from the backend, likely stored in `SourceArticles.url`).
-*   **Context/UI:** Ensure the sharing action provides appropriate feedback (e.g., the share sheet appears promptly). Consider the source rectangle for iPad sharing if using `share_plus`.
-
-**Acceptance Criteria:**
-*   Tapping the share icon in the `ArticleDetailScreen` AppBar opens the native OS sharing dialog/sheet.
-*   The dialog allows sharing the article's headline and URL (or other relevant info) to compatible apps.
-*   The implementation uses a standard package like `share_plus` for cross-platform compatibility.
-*   Necessary article data (URL, headline) is correctly fetched and passed to the sharing function.
-
-## Task: Fetch and Display Full Article Content on Detail Screen
-
-**Problem:**
-The `ArticleDetailScreen` currently only displays the passed `articleId` as placeholder text (`Text('Showing details for Article ID: $articleId')`). It does not fetch or render the actual full content (headline, images, body text in English/German) associated with that ID from the backend.
-
-**Goal:**
-Implement the data fetching logic and UI rendering for the `ArticleDetailScreen` to display the complete article content based on the provided `articleId`. The screen should handle loading and error states appropriately and display content according to the selected language.
-
-**Possible Approaches & Considerations:**
-*   **Backend Endpoint:** Ensure a dedicated Supabase Edge Function (or potentially a direct table query if RLS is sufficient) exists to fetch the *full* details of a single `NewsArticle` (including `ContentEnglish`, `ContentGerman`, `headlineEnglish`, `headlineGerman`, images, `createdAt`, `SourceName`, `sourceUrl`, etc.) based on its ID. This endpoint should respect RLS (only return 'PUBLISHED' articles).
-*   **Data Fetching Service:** Create or update a service class (e.g., `ArticleDetailService` in `lib/features/article_detail/data/`) responsible for calling the backend endpoint. This service should take the `articleId` and return a `Future<Article>` (assuming a full `Article` model exists or needs to be created).
-*   **Riverpod Provider:** Use a Riverpod provider, likely a `FutureProvider.family` or `AsyncNotifierProvider.family`, to manage the fetching state for a specific `articleId`.
-    *   `FutureProvider.family<Article, int>`: Simpler for read-only display. Takes the `articleId` as an argument.
-    *   `AsyncNotifierProvider.family<ArticleNotifier, Article, int>`: More flexible if you need to perform actions related to the detail screen later.
-*   **UI Implementation:**
-    *   Make `ArticleDetailScreen` a `ConsumerWidget` or `ConsumerStatefulWidget`.
-    *   Watch the new Riverpod provider using the passed `articleId`.
-    *   Use the provider's state (`.when(...)`) to display:
-        *   A `LoadingIndicator` while fetching.
-        *   An `ErrorMessageWidget` on error (with retry).
-        *   The formatted article content on success.
-*   **Content Rendering:**
-    *   Display the headline (respecting the selected language via `localeNotifierProvider`).
-    *   Display the main image(s) using `CachedNetworkImage`.
-    *   Display the main body content (`ContentEnglish` or `ContentGerman` based on locale). **Consider using `flutter_html` or `flutter_markdown` package if the content contains HTML or Markdown formatting** that needs proper rendering, otherwise, a simple `Text` widget might suffice if it's plain text.
-    *   Display metadata like publication date, source name, etc.
-*   **Model:** You might need a more detailed `Article` model class (perhaps in `lib/features/article_detail/data/` or `lib/core/models/`) to represent the full structure returned by the detail endpoint, distinct from the `ArticlePreview` used in the list.
-
-**Acceptance Criteria:**
-*   When navigated to, `ArticleDetailScreen` fetches the full data for the given `articleId` from the backend.
-*   Appropriate loading and error states are shown during fetching.
-*   On success, the screen displays the article's headline, main image(s), and body content (respecting the selected language).
-*   Relevant metadata (date, source) is displayed.
-*   The implementation uses Riverpod for state management and a dedicated service for data fetching.
 
 ## Task: Implement Pagination for Team-Specific Article List
 
