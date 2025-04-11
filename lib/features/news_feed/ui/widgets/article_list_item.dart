@@ -5,10 +5,11 @@ import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:intl/intl.dart';
-import 'package:tackle_4_loss/core/theme/app_colors.dart';
 // Removed import for ArticleDetailScreen
 // Import navigation provider to update detail state
 import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
+// Import team constants for logo handling
+import 'package:tackle_4_loss/core/constants/team_constants.dart';
 
 class ArticleListItem extends ConsumerWidget {
   final ArticlePreview article;
@@ -19,7 +20,6 @@ class ArticleListItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-    final chipTheme = theme.chipTheme;
     final currentLocale = ref.watch(localeNotifierProvider);
 
     final headlineToShow =
@@ -96,8 +96,9 @@ class ArticleListItem extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 6),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         if (article.createdAt != null)
                           Text(
@@ -106,43 +107,49 @@ class ArticleListItem extends ConsumerWidget {
                             ).add_jm().format(article.createdAt!),
                             style: textTheme.bodySmall,
                           ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 6.0,
-                          runSpacing: 4.0,
-                          children: [
-                            if (article.teamId != null &&
-                                article.teamId!.isNotEmpty)
-                              Chip(
-                                label: Text(article.teamId!),
-                                padding:
-                                    chipTheme.labelPadding ??
-                                    const EdgeInsets.symmetric(horizontal: 4),
-                                labelStyle: chipTheme.labelStyle?.copyWith(
-                                  fontSize: 10,
+                        // Team logo - now positioned on the right
+                        if (article.teamId != null &&
+                            article.teamId!.isNotEmpty)
+                          Container(
+                            height: 28,
+                            width: 28,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Colors.white,
+                              boxShadow: [
+                                BoxShadow(
+                                  // Use withAlpha instead of withOpacity
+                                  color: Colors.black.withAlpha(
+                                    (255 * 0.1).round(),
+                                  ),
+                                  blurRadius: 2,
+                                  spreadRadius: 0,
                                 ),
-                                visualDensity: VisualDensity.compact,
-                                materialTapTargetSize:
-                                    MaterialTapTargetSize.shrinkWrap,
-                                backgroundColor: chipTheme.backgroundColor,
-                              ),
-                            Chip(
-                              label: Text(article.status.toUpperCase()),
-                              backgroundColor: _getStatusColor(article.status),
-                              padding:
-                                  chipTheme.labelPadding ??
-                                  const EdgeInsets.symmetric(horizontal: 4),
-                              labelStyle: chipTheme.labelStyle?.copyWith(
-                                color: AppColors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              visualDensity: VisualDensity.compact,
-                              materialTapTargetSize:
-                                  MaterialTapTargetSize.shrinkWrap,
+                              ],
                             ),
-                          ],
-                        ),
+                            child: ClipOval(
+                              child: Image.asset(
+                                'assets/team_logos/${teamLogoMap[article.teamId!]?.toLowerCase() ?? 'nfl'}.png',
+                                height: 24,
+                                width: 24,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  // Log the error for debugging
+                                  debugPrint('Error loading team logo: $error');
+                                  // Return a fallback (either the team ID text or a default icon)
+                                  return Center(
+                                    child: Text(
+                                      article.teamId!,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ],
@@ -153,20 +160,5 @@ class ArticleListItem extends ConsumerWidget {
         ),
       ),
     );
-  }
-
-  Color _getStatusColor(String? status) {
-    switch (status?.toUpperCase()) {
-      case 'NEW':
-        return Colors.green.shade600;
-      case 'UPDATE':
-        return Colors.orange.shade700;
-      case 'PUBLISHED':
-        return AppColors.primaryGreen;
-      case 'OLD':
-        return Colors.grey.shade600;
-      default:
-        return Colors.grey.shade600;
-    }
   }
 }

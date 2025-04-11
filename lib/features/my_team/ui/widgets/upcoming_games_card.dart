@@ -12,7 +12,7 @@ class UpcomingGamesCard extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     // Get the correct logo path using the helper function
-    final logoPath = getTeamLogoPath(teamId);
+    getTeamLogoPath(teamId);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -22,16 +22,6 @@ class UpcomingGamesCard extends StatelessWidget {
       shadowColor: Color.fromARGB((255 * 0.1).round(), 0, 0, 0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       child: ExpansionTile(
-        leading: // --- CORRECT USAGE ---
-            Image.asset(
-          logoPath, // Use the path directly from the helper function
-          height: 24,
-          width: 24,
-          errorBuilder:
-              (context, error, stackTrace) =>
-                  const SizedBox(width: 24, height: 24),
-        ),
-        // --- END CORRECTION ---
         title: Text(
           'Upcoming Games',
           style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),

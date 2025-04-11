@@ -9,12 +9,12 @@ import 'package:tackle_4_loss/core/navigation/main_navigation_wrapper.dart';
 
 class TeamHuddleSection extends StatelessWidget {
   final String teamId;
-  final ArticlePreview headlineArticle;
+  final ArticlePreview? headlineArticle;
 
   const TeamHuddleSection({
     super.key,
     required this.teamId,
-    required this.headlineArticle,
+    this.headlineArticle,
   });
 
   @override
@@ -77,10 +77,13 @@ class TeamHuddleSection extends StatelessWidget {
             ),
             const Divider(height: 1, indent: 16, endIndent: 16),
 
-            // --- Headline Story ---
+            // --- Headline Story or No News Available UI ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: HeadlineStoryCard(article: headlineArticle),
+              child:
+                  headlineArticle != null
+                      ? HeadlineStoryCard(article: headlineArticle!)
+                      : _buildNoNewsAvailableCard(context, logoPath),
             ),
 
             // --- Expandable Games and Injury Cards ---
@@ -89,6 +92,137 @@ class TeamHuddleSection extends StatelessWidget {
               child: _buildTeamInfoSubSection(context, isMobileLayout, teamId),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNoNewsAvailableCard(BuildContext context, String logoPath) {
+    final theme = Theme.of(context);
+    final textTheme = theme.textTheme;
+
+    // Adding logging to validate logo path
+    debugPrint(
+      'TeamHuddleSection: Attempting to load logo from path: $logoPath',
+    );
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 8.0),
+      child: Card(
+        margin: EdgeInsets.zero,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16.0),
+        ),
+        elevation: 4.0,
+        shadowColor: Colors.black.withAlpha((255 * 0.2).round()),
+        child: AspectRatio(
+          aspectRatio: 16 / 9,
+          child: Container(
+            color: theme.colorScheme.surface,
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Use a larger size for the logo and add better error handling
+                SizedBox(
+                  height: 80,
+                  width: 80,
+                  child: Image.asset(
+                    logoPath,
+                    fit: BoxFit.contain,
+                    errorBuilder: (ctx, err, st) {
+                      // Log error for debugging
+                      debugPrint('TeamHuddleSection: Error loading logo: $err');
+
+                      // First fallback: Try using a direct reference to the team logo
+                      final String directPath =
+                          'assets/team_logos/${teamLogoMap[teamId.toUpperCase()]?.toLowerCase() ?? 'nfl'}.png';
+                      if (directPath != logoPath) {
+                        debugPrint(
+                          'TeamHuddleSection: Trying alternate path: $directPath',
+                        );
+                        return Image.asset(
+                          directPath,
+                          fit: BoxFit.contain,
+                          errorBuilder: (ctx2, err2, st2) {
+                            // Second fallback: Display NFL logo as a last resort
+                            debugPrint(
+                              'TeamHuddleSection: Falling back to NFL logo',
+                            );
+                            return Image.asset(
+                              'assets/team_logos/nfl.png',
+                              fit: BoxFit.contain,
+                              errorBuilder: (ctx3, err3, st3) {
+                                // Final fallback: If all image attempts fail, show team abbreviation
+                                return Container(
+                                  decoration: BoxDecoration(
+                                    shape: BoxShape.circle,
+                                    color: theme.colorScheme.primary.withAlpha(
+                                      (255 * 0.1).round(),
+                                    ),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      teamId.toUpperCase(),
+                                      style: TextStyle(
+                                        color: theme.colorScheme.primary,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 20,
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        );
+                      }
+
+                      // If paths are the same, go directly to NFL logo
+                      return Image.asset(
+                        'assets/team_logos/nfl.png',
+                        fit: BoxFit.contain,
+                        errorBuilder: (ctx3, err3, st3) {
+                          // Final fallback: If all image attempts fail, show team abbreviation
+                          return Container(
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: theme.colorScheme.primary.withAlpha(
+                                (255 * 0.1).round(),
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                teamId.toUpperCase(),
+                                style: TextStyle(
+                                  color: theme.colorScheme.primary,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 20,
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  "currently no News available...",
+                  style: textTheme.titleMedium?.copyWith(
+                    // Use Color.alphaBlend for text color opacity
+                    color: Color.alphaBlend(
+                      Color.fromARGB((255 * 0.7).round(), 0, 0, 0),
+                      theme.colorScheme.onSurface,
+                    ),
+                    fontWeight: FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );

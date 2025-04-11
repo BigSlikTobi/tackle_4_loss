@@ -1,9 +1,8 @@
 // lib/core/widgets/global_app_bar.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Locale provider no longer directly needed here
-// import 'package:your_project_name/core/providers/locale_provider.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
+import 'package:tackle_4_loss/core/constants/team_constants.dart';
 
 // Keep as ConsumerWidget only if other passed actions might need ref
 class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -11,6 +10,7 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
   final List<Widget>? actions; // Actions passed from parent screen
   final bool automaticallyImplyLeading;
   final Widget? leading; // Leading passed from parent screen (e.g., menu icon)
+  final String? teamId; // Added parameter for the selected team ID
 
   const GlobalAppBar({
     super.key,
@@ -18,17 +18,37 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
     this.actions,
     this.automaticallyImplyLeading = true,
     this.leading,
+    this.teamId, // New parameter
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     // Keep ref if ConsumerWidget
     final iconTheme = Theme.of(context).iconTheme;
-    // final currentLocale = ref.watch(localeNotifierProvider); // Remove
 
     // Use only actions passed from the parent screen
-    List<Widget> effectiveActions =
-        actions ?? []; // Default to empty list if null
+    List<Widget> effectiveActions = [
+      ...(actions ?? []),
+    ]; // Default to empty list if null
+
+    // Add team logo to actions if teamId is provided
+    if (teamId != null && teamLogoMap.containsKey(teamId)) {
+      effectiveActions.add(
+        Padding(
+          padding: const EdgeInsets.only(right: 12.0),
+          child: SizedBox(
+            width: 32,
+            height: 32,
+            child: Image.asset(
+              'assets/team_logos/${teamLogoMap[teamId]}.png',
+              fit: BoxFit.contain,
+              errorBuilder:
+                  (context, error, stackTrace) => const SizedBox.shrink(),
+            ),
+          ),
+        ),
+      );
+    }
 
     return AppBar(
       backgroundColor: AppColors.backgroundLight,
