@@ -5,8 +5,9 @@ import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-// Import detail screen for navigation (ensure path is correct)
-import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
+// Removed import for ArticleDetailScreen
+// Import navigation provider to update detail state
+import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 
 class HeadlineStoryCard extends ConsumerWidget {
   final ArticlePreview article;
@@ -23,13 +24,12 @@ class HeadlineStoryCard extends ConsumerWidget {
             ? article.germanHeadline
             : article.englishHeadline;
 
-    // Fallback logic for headline display
     final displayHeadline =
         headlineToShow.isNotEmpty
             ? headlineToShow
             : (article.englishHeadline.isNotEmpty
                 ? article.englishHeadline
-                : "Headline Unavailable"); // Final fallback
+                : "Headline Unavailable");
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 8.0),
@@ -40,23 +40,17 @@ class HeadlineStoryCard extends ConsumerWidget {
           borderRadius: BorderRadius.circular(16.0),
         ),
         elevation: 4.0,
-        shadowColor: Colors.black.withAlpha(
-          (255 * 0.2).round(),
-        ), // Use withAlpha instead
+        shadowColor: Colors.black.withAlpha((255 * 0.2).round()),
         child: InkWell(
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder:
-                    (context) => ArticleDetailScreen(articleId: article.id),
-              ),
-            );
+            // --- MODIFIED: Update detail state instead of Navigator.push ---
+            ref.read(currentDetailArticleIdProvider.notifier).state =
+                article.id;
+            // --- End Modification ---
           },
           child: Stack(
             alignment: Alignment.bottomLeft,
             children: [
-              // 1. Background Image
               AspectRatio(
                 aspectRatio: 16 / 9,
                 child:
@@ -82,19 +76,13 @@ class HeadlineStoryCard extends ConsumerWidget {
                           ),
                         ),
               ),
-
-              // 2. Gradient Overlay
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       colors: [
-                        Colors.black.withAlpha(
-                          (255 * 0.0).round(),
-                        ), // Use withAlpha
-                        Colors.black.withAlpha(
-                          (255 * 0.7).round(),
-                        ), // Use withAlpha
+                        Colors.black.withAlpha((255 * 0.0).round()),
+                        Colors.black.withAlpha((255 * 0.7).round()),
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -103,24 +91,19 @@ class HeadlineStoryCard extends ConsumerWidget {
                   ),
                 ),
               ),
-
-              // 3. Headline Text
               Positioned(
-                // Use Positioned instead of Padding for better control with Stack
                 bottom: 16.0,
                 left: 16.0,
-                right: 16.0, // Constrain width
+                right: 16.0,
                 child: Text(
-                  displayHeadline, // Use the variable with fallback logic
+                  displayHeadline,
                   style: textTheme.titleLarge?.copyWith(
                     color: AppColors.white,
                     fontWeight: FontWeight.bold,
                     shadows: [
                       Shadow(
                         blurRadius: 4.0,
-                        color: Colors.black.withAlpha(
-                          (255 * 0.5).round(),
-                        ), // Use withAlpha
+                        color: Colors.black.withAlpha((255 * 0.5).round()),
                         offset: const Offset(1.0, 1.0),
                       ),
                     ],

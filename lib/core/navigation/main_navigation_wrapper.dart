@@ -1,170 +1,281 @@
 // lib/core/navigation/main_navigation_wrapper.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tackle_4_loss/core/navigation/app_navigation.dart'; // Updated import
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // Updated import
-import 'package:tackle_4_loss/core/widgets/global_app_bar.dart'; // Updated import
-import 'package:tackle_4_loss/core/providers/locale_provider.dart'; // Import locale provider
-// Assuming AppColors might be needed for Divider or other styling
-// Updated import
+import 'package:share_plus/share_plus.dart'; // <-- Import share_plus
+import 'package:tackle_4_loss/core/navigation/app_navigation.dart';
+import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
+import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
+import 'package:tackle_4_loss/core/providers/locale_provider.dart';
+import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
+// Import the article detail provider to read data for sharing
+import 'package:tackle_4_loss/features/article_detail/logic/article_detail_provider.dart';
 
-// Define breakpoints and max width
 const double kMobileLayoutBreakpoint = 720.0;
-const double kMaxContentWidth = 1200.0; // Max width for the main content area
+const double kMaxContentWidth = 1200.0;
 
 class MainNavigationWrapper extends ConsumerWidget {
   const MainNavigationWrapper({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch necessary providers
     final selectedIndex = ref.watch(selectedNavIndexProvider);
     final currentLocale = ref.watch(localeNotifierProvider);
     final localeNotifier = ref.read(localeNotifierProvider.notifier);
+    final currentDetailId = ref.watch(currentDetailArticleIdProvider);
 
-    // Determine layout based on screen width
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobileLayout = screenWidth < kMobileLayoutBreakpoint;
 
-    // Define the list of screens from navigation items
     final screens = appNavItems.map((item) => item.screen).toList();
 
-    // Define the main content widget (IndexedStack)
-    // This holds the currently selected screen based on the navigation index
-    final Widget mainContent = IndexedStack(
+    final Widget mainIndexedStack = IndexedStack(
       index: selectedIndex,
       children: screens,
     );
+
+    final Widget bodyContent =
+        currentDetailId != null
+            ? ArticleDetailScreen(articleId: currentDetailId)
+            : mainIndexedStack;
 
     // --- Build Mobile Layout ---
     if (isMobileLayout) {
       return Scaffold(
         appBar: GlobalAppBar(
-          automaticallyImplyLeading:
-              false, // No back/menu button on root mobile screen
-          // Actions are handled within GlobalAppBar (like language picker)
+          automaticallyImplyLeading: false,
+          leading: null, // No leading on mobile
+          // --- Add Actions Conditionally ---
+          actions: [
+            if (currentDetailId != null) ...[
+              // Refresh Action for Detail View
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh',
+                // Read the provider status to potentially show loading during refresh
+                // For simplicity, just invalidate for now.
+                onPressed:
+                    () =>
+                        ref.invalidate(articleDetailProvider(currentDetailId)),
+              ),
+              // Share Action for Detail View
+              IconButton(
+                icon: const Icon(Icons.share_outlined),
+                tooltip: 'Share Article',
+                onPressed: () async {
+                  // Read the provider for the current article
+                  final articleAsyncValue = ref.read(
+                    articleDetailProvider(currentDetailId),
+                  );
+                  final article = articleAsyncValue.valueOrNull;
+
+                  if (article != null) {
+                    final headline = article.getLocalizedHeadline(
+                      currentLocale.languageCode,
+                    );
+                    final url = article.sourceUrl;
+                    // Construct the text to share
+                    final shareText =
+                        url != null ? '$headline\n\n$url' : headline;
+                    try {
+                      // Trigger the native share sheet
+                      await Share.share(shareText);
+                    } catch (e) {
+                      debugPrint("Error sharing: $e");
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not start sharing.'),
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    debugPrint("Share pressed but article data not available.");
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Article not loaded yet.'),
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+          ],
+          // --- End Actions ---
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: selectedIndex,
-          onTap:
-              (index) =>
-                  ref.read(selectedNavIndexProvider.notifier).state = index,
-          items:
-              appNavItems
-                  .map(
-                    (item) => BottomNavigationBarItem(
-                      icon: Icon(item.icon),
-                      label: item.label,
-                    ),
-                  )
-                  .toList(),
-          type:
-              BottomNavigationBarType.fixed, // Ensure labels are always visible
-          selectedItemColor:
-              Theme.of(
-                context,
-              ).colorScheme.primary, // Use theme color for selection
-          unselectedItemColor: Colors.grey[600], // Color for unselected items
-          // Consider setting background color if needed:
-          // backgroundColor: Theme.of(context).canvasColor,
-        ),
-        body: mainContent, // Body is just the selected screen on mobile
+        bottomNavigationBar:
+            currentDetailId == null
+                ? BottomNavigationBar(
+                  currentIndex: selectedIndex,
+                  onTap: (index) {
+                    ref.read(currentDetailArticleIdProvider.notifier).state =
+                        null;
+                    ref.read(selectedNavIndexProvider.notifier).state = index;
+                  },
+                  items:
+                      appNavItems
+                          .map(
+                            (item) => BottomNavigationBarItem(
+                              icon: Icon(item.icon),
+                              label: item.label,
+                            ),
+                          )
+                          .toList(),
+                  type: BottomNavigationBarType.fixed,
+                  selectedItemColor: Theme.of(context).colorScheme.primary,
+                  unselectedItemColor: Colors.grey[600],
+                )
+                : null,
+        body: bodyContent,
       );
     }
     // --- Build Desktop/Tablet Layout ---
     else {
-      // Key to control the Drawer programmatically
       final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
       return Scaffold(
         key: scaffoldKey,
         appBar: GlobalAppBar(
-          automaticallyImplyLeading: false, // No default back button
-          // Provide the hamburger menu icon to open the drawer
+          automaticallyImplyLeading: false,
           leading: IconButton(
+            // Always show menu button
             icon: const Icon(Icons.menu),
             tooltip: 'Open Menu',
             onPressed: () => scaffoldKey.currentState?.openDrawer(),
           ),
-          // Actions (like language picker) are already part of GlobalAppBar
+          // --- Add Actions Conditionally ---
+          actions: [
+            if (currentDetailId != null) ...[
+              // Refresh Action for Detail View
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh',
+                onPressed:
+                    () =>
+                        ref.invalidate(articleDetailProvider(currentDetailId)),
+              ),
+              // Share Action for Detail View
+              IconButton(
+                icon: const Icon(Icons.share_outlined),
+                tooltip: 'Share Article',
+                onPressed: () async {
+                  // Read the provider for the current article
+                  final articleAsyncValue = ref.read(
+                    articleDetailProvider(currentDetailId),
+                  );
+                  final article = articleAsyncValue.valueOrNull;
+
+                  if (article != null) {
+                    final headline = article.getLocalizedHeadline(
+                      currentLocale.languageCode,
+                    );
+                    final url = article.sourceUrl;
+                    final shareText =
+                        url != null ? '$headline\n\n$url' : headline;
+                    try {
+                      // On Desktop/Web, might need sourceRect for iPad popover
+                      final box = context.findRenderObject() as RenderBox?;
+                      await Share.share(
+                        shareText,
+                        // subject: headline, // Optional: Subject for email
+                        sharePositionOrigin:
+                            box != null
+                                ? box.localToGlobal(Offset.zero) & box.size
+                                : null,
+                      );
+                    } catch (e) {
+                      debugPrint("Error sharing: $e");
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Could not start sharing.'),
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    debugPrint("Share pressed but article data not available.");
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Article not loaded yet.'),
+                        ),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
+            // You can add other global actions here if needed later
+          ],
+          // --- End Actions ---
         ),
-        // Drawer acts as the sidebar navigation for desktop
         drawer: Drawer(
+          // Drawer remains the same
           child: ListView(
-            padding: EdgeInsets.zero, // Remove default padding
+            padding: EdgeInsets.zero,
             children: [
-              // Drawer Header with Logo
               DrawerHeader(
                 decoration: BoxDecoration(
-                  // Use AppBar color or a slightly different shade if desired
                   color:
                       Theme.of(context).appBarTheme.backgroundColor ??
                       Theme.of(context).colorScheme.primary,
                 ),
                 child: Center(
-                  child: Image.asset(
-                    'assets/images/logo.jpg', // Ensure this uses the correct logo for the header bg
-                    height: 150,
-                    // Consider using logo_light.png if header is dark
-                  ),
+                  child: Image.asset('assets/images/logo.jpg', height: 150),
                 ),
               ),
-              // Standard Navigation List Tiles
               for (int i = 0; i < appNavItems.length; i++)
                 ListTile(
                   leading: Icon(appNavItems[i].icon),
                   title: Text(appNavItems[i].label),
-                  selected: i == selectedIndex, // Highlight selected item
+                  selected: i == selectedIndex && currentDetailId == null,
                   selectedColor: Theme.of(context).colorScheme.primary,
-                  selectedTileColor: Theme.of(context).colorScheme.primary
-                      .withAlpha(26), // Use integer alpha value (10% of 255)
+                  selectedTileColor: Theme.of(
+                    context,
+                  ).colorScheme.primary.withAlpha(26),
                   onTap: () {
+                    ref.read(currentDetailArticleIdProvider.notifier).state =
+                        null;
                     ref.read(selectedNavIndexProvider.notifier).state = i;
-                    Navigator.pop(context); // Close the drawer after selection
+                    Navigator.pop(context);
                   },
                 ),
-              // Divider before language settings
               const Divider(indent: 16, endIndent: 16),
-              // Language Selection Section
               const Padding(
                 padding: EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 8.0),
                 child: Text(
-                  "Language / Sprache", // Consider localization later if needed
+                  "Language / Sprache",
                   style: TextStyle(fontWeight: FontWeight.bold),
                 ),
               ),
-              // English Language Radio Button
               RadioListTile<Locale>(
                 title: const Text('English'),
                 value: const Locale('en'),
-                groupValue: currentLocale, // Checked state based on provider
+                groupValue: currentLocale,
                 onChanged: (Locale? value) {
                   if (value != null && currentLocale != value) {
-                    Navigator.pop(context); // Close drawer FIRST
-                    localeNotifier.setLocale(
-                      value,
-                    ); // Update locale AFTER closing
+                    Navigator.pop(context);
+                    localeNotifier.setLocale(value);
                   } else if (value != null) {
-                    Navigator.pop(context); // Close drawer even if not changing
+                    Navigator.pop(context);
                   }
                 },
-                // Make selected item more prominent
                 selected: currentLocale.languageCode == 'en',
                 activeColor: Theme.of(context).colorScheme.primary,
               ),
-              // German Language Radio Button
               RadioListTile<Locale>(
                 title: const Text('Deutsch'),
                 value: const Locale('de'),
                 groupValue: currentLocale,
                 onChanged: (Locale? value) {
                   if (value != null && currentLocale != value) {
-                    Navigator.pop(context); // Close drawer FIRST
-                    localeNotifier.setLocale(
-                      value,
-                    ); // Update locale AFTER closing
+                    Navigator.pop(context);
+                    localeNotifier.setLocale(value);
                   } else if (value != null) {
-                    Navigator.pop(context); // Close drawer even if not changing
+                    Navigator.pop(context);
                   }
                 },
                 selected: currentLocale.languageCode == 'de',
@@ -173,16 +284,12 @@ class MainNavigationWrapper extends ConsumerWidget {
             ],
           ),
         ),
-        // --- Apply Conditional Constraint to the Body for Desktop ---
         body: Center(
-          // 1. Center the constrained box horizontally
           child: ConstrainedBox(
-            // 2. Limit the maximum width
             constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-            child: mainContent, // 3. Display the selected screen (IndexedStack)
+            child: bodyContent,
           ),
         ),
-        // --- End Body Modification ---
       );
     }
   }
