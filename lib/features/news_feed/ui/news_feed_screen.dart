@@ -73,12 +73,25 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
             final headlineArticle = headlineAsyncValue.valueOrNull;
             final selectedTeamId = selectedTeamAsyncValue.valueOrNull;
 
-            // Determine if we should show the team huddle
-            // Requires a selected team AND a valid headline article (likely the team's latest)
-            final bool showTeamHuddle =
-                selectedTeamId != null &&
-                headlineArticle != null &&
-                headlineArticle.teamId == selectedTeamId;
+            // UPDATED: Always show TeamHuddleSection when a team is selected,
+            // regardless of whether there's a headline article for that team or not
+            final bool showTeamHuddle = selectedTeamId != null;
+
+            // Determine which headline article to pass to TeamHuddleSection
+            // If there's a headline matching the selected team, use it
+            // Otherwise, pass null to trigger the placeholder UI
+            ArticlePreview? teamHeadlineArticle;
+            if (selectedTeamId != null && headlineArticle != null) {
+              if (headlineArticle.teamId == selectedTeamId) {
+                teamHeadlineArticle = headlineArticle;
+              } else {
+                // Check if any article matches the selected team to use as a headline
+                teamHeadlineArticle =
+                    allFetchedArticles
+                        .where((a) => a.teamId == selectedTeamId)
+                        .firstOrNull;
+              }
+            }
 
             // Filter the main list articles
             // Always exclude the headline article (whether it's team specific or overall latest)
@@ -136,10 +149,9 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                   // 1a. Show Team Huddle Section
                   SliverToBoxAdapter(
                     child: TeamHuddleSection(
-                      teamId:
-                          selectedTeamId, // Safe to use ! because of showTeamHuddle check
+                      teamId: selectedTeamId, // Remove unnecessary ! operator
                       headlineArticle:
-                          headlineArticle, // Safe to use ! here too
+                          teamHeadlineArticle, // Use the potentially null team headline article
                     ),
                   )
                 else if (headlineArticle != null)

@@ -76,12 +76,12 @@ String getTeamLogoPath(String teamAbbreviation) {
   // Handle potential case issues and missing keys gracefully
   final logoStem = teamLogoMap[teamAbbreviation.toUpperCase()];
   if (logoStem != null) {
-    // CORRECT PATH: Returns 'assets/logos/some_team_name.png'
-    return 'assets/logos/${logoStem.toLowerCase().replaceAll(' ', '_')}.png';
+    // CORRECTED PATH: Returns 'assets/team_logos/some_team_name.png' instead of 'assets/logos/...'
+    return 'assets/team_logos/${logoStem.toLowerCase().replaceAll(' ', '_')}.png';
   }
   // Return a placeholder path if team not found
-  // Ensure you have an nfl.png in assets/logos/
-  return 'assets/logos/nfl.png';
+  // Ensure you have an nfl.png in assets/team_logos/
+  return 'assets/team_logos/nfl.png';
 }
 
 // Helper Function for Full Name

@@ -12,7 +12,7 @@ class InjuryReportCard extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     // Get the correct logo path using the helper function
-    final logoPath = getTeamLogoPath(teamId);
+    getTeamLogoPath(teamId);
 
     return Card(
       margin: EdgeInsets.zero,
@@ -21,16 +21,6 @@ class InjuryReportCard extends StatelessWidget {
       shadowColor: const Color.fromRGBO(0, 0, 0, 0.1), // Use Color.fromRGBO
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       child: ExpansionTile(
-        leading: // --- CORRECT USAGE ---
-            Image.asset(
-          logoPath, // Use the path directly from the helper function
-          height: 24,
-          width: 24,
-          errorBuilder:
-              (context, error, stackTrace) =>
-                  const SizedBox(width: 24, height: 24),
-        ),
-        // --- END CORRECTION ---
         title: Text(
           'Injury Report',
           style: textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),

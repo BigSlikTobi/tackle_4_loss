@@ -6,12 +6,51 @@ import 'package:tackle_4_loss/core/navigation/app_navigation.dart';
 import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
+import 'package:tackle_4_loss/core/providers/preference_provider.dart'; // Import for team ID
 import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 // Import the article detail provider to read data for sharing
 import 'package:tackle_4_loss/features/article_detail/logic/article_detail_provider.dart';
 
 const double kMobileLayoutBreakpoint = 720.0;
 const double kMaxContentWidth = 1200.0;
+
+// Create a TeamAwareGlobalAppBar widget
+class TeamAwareGlobalAppBar extends ConsumerWidget
+    implements PreferredSizeWidget {
+  final bool automaticallyImplyLeading;
+  final Widget? leading;
+  final List<Widget>? actions;
+
+  const TeamAwareGlobalAppBar({
+    super.key,
+    this.automaticallyImplyLeading = true,
+    this.leading,
+    this.actions,
+  });
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Watch the selected team provider
+    final selectedTeamState = ref.watch(selectedTeamNotifierProvider);
+
+    // Get the team ID when available
+    final String? teamId = selectedTeamState.maybeWhen(
+      data: (id) => id,
+      orElse: () => null,
+    );
+
+    // Return the GlobalAppBar with the team ID
+    return GlobalAppBar(
+      automaticallyImplyLeading: automaticallyImplyLeading,
+      leading: leading,
+      actions: actions,
+      teamId: teamId, // Pass the team ID
+    );
+  }
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+}
 
 class MainNavigationWrapper extends ConsumerWidget {
   const MainNavigationWrapper({super.key});
@@ -41,7 +80,8 @@ class MainNavigationWrapper extends ConsumerWidget {
     // --- Build Mobile Layout ---
     if (isMobileLayout) {
       return Scaffold(
-        appBar: GlobalAppBar(
+        appBar: TeamAwareGlobalAppBar(
+          // Using TeamAwareGlobalAppBar instead of GlobalAppBar
           automaticallyImplyLeading: false,
           leading: null, // No leading on mobile
           // --- Add Actions Conditionally ---
@@ -137,7 +177,8 @@ class MainNavigationWrapper extends ConsumerWidget {
 
       return Scaffold(
         key: scaffoldKey,
-        appBar: GlobalAppBar(
+        appBar: TeamAwareGlobalAppBar(
+          // Using TeamAwareGlobalAppBar here
           automaticallyImplyLeading: false,
           leading: IconButton(
             // Always show menu button
