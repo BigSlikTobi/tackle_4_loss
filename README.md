@@ -13,6 +13,7 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
     *   [State Management (Riverpod)](#state-management-riverpod)
     *   [Backend Integration (Supabase)](#backend-integration-supabase)
     *   [Navigation (State-Driven Inline Detail View)](#navigation-state-driven-inline-detail-view)
+    *   [Real-time Updates (Supabase Realtime)](#real-time-updates-supabase-realtime)
     *   [Theming & Styling](#theming--styling)
     *   [Data Fetching & Services](#data-fetching--services)
     *   [Localization](#localization)
@@ -28,7 +29,7 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
 ## Overview
 
 Tackle4Loss aims to provide users with up-to-date American Football news curated from different NFL Source News Sites like NFL.com or ESPN.com.
-This Flutter application serves as the user interface, interacting with a Supabase backend for data storage, retrieval (via Edge Functions), and potentially authentication and real-time updates. The app is designed to be responsive, adapting its layout for mobile, tablet, and web screens.
+This Flutter application serves as the user interface, interacting with a Supabase backend for data storage, retrieval (via Edge Functions), real-time updates, and potentially authentication. The app is designed to be responsive, adapting its layout for mobile, tablet, and web screens, and includes preparations for push notifications based on user preferences.
 
 ## Prerequisites
 
@@ -41,6 +42,7 @@ This Flutter application serves as the user interface, interacting with a Supaba
     *   **Web:** Google Chrome (recommended for debugging).
 *   **Run `flutter doctor -v`:** Ensure your environment is set up correctly for your target platforms.
 *   **Git:** For cloning the repository.
+*   **(Backend) Supabase Account:** For backend data and real-time functionality.
 
 ## Getting Started
 
@@ -62,7 +64,12 @@ This Flutter application serves as the user interface, interacting with a Supaba
         SUPABASE_ANON_KEY=your-public-anon-key
         ```
     *   **IMPORTANT:** Ensure `.env` is listed in your `.gitignore` file to avoid committing credentials.
-4.  **Run the App:** (See [Running the App](#running-the-app) section below).
+4.  **Enable Supabase Realtime (if not already):**
+    *   Go to your Supabase project dashboard.
+    *   Navigate to `Database` -> `Replication`.
+    *   Ensure the `public` schema source is enabled.
+    *   Toggle **ON** replication for the `NewsArticles` table (or your equivalent table name), ensuring `INSERT` is enabled.
+5.  **Run the App:** (See [Running the App](#running-the-app) section below).
 
 ## Contributing
 
@@ -102,8 +109,8 @@ The project follows a **Feature-First** architecture within the `lib` directory:
         *   `constants/`: App-wide constants (e.g., `team_constants.dart`).
         *   `models/`: Shared data models (if any).
         *   `navigation/`: Navigation setup (`NavItem`, `MainNavigationWrapper`, `app_navigation.dart`).
-        *   `providers/`: Shared Riverpod providers (e.g., `locale_provider.dart`, `navigation_provider.dart`, `preference_provider.dart`).
-        *   `services/`: Shared services (e.g., `preference_service.dart`).
+        *   `providers/`: Shared Riverpod providers (e.g., `locale_provider.dart`, `navigation_provider.dart`, `preference_provider.dart`, `realtime_provider.dart`).
+        *   `services/`: Shared services (e.g., `preference_service.dart`, `realtime_service.dart`).
         *   `theme/`: Global theme data (`app_colors.dart`, `app_theme.dart`).
         *   `utils/`: Utility functions.
         *   `widgets/`: Common reusable widgets (e.g., `GlobalAppBar`, `LoadingIndicator`, `ErrorMessageWidget`).
@@ -115,7 +122,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
         *   `my_team/`
             *   `data/`: (If models/services specific to this feature are added)
             *   `logic/`: (If providers specific to this feature are added)
-            *   `ui/`: Screens (`MyTeamScreen`), Widgets (`UpcomingGamesCard`, `InjuryReportCard`, `TeamHuddleSection`, `TeamSelectionDropdown`).
+            *   `ui/`: Screens (`MyTeamScreen`), Widgets (`UpcomingGamesCard`, `InjuryReportCard`, `TeamHuddleSection`, `TeamSelectionDropdown`, `TeamArticleList`).
         *   `article_detail/`
             *   `data/`: Models (`ArticleDetail`), Services (`ArticleDetailService`).
             *   `logic/`: Riverpod Providers (`article_detail_provider.dart`).
@@ -133,9 +140,9 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   **Supabase:** Backend-as-a-Service:
     *   **Database:** PostgreSQL for data storage.
     *   **Edge Functions:** Deno runtime for serverless backend logic (used for `articlePreviews`, `articleDetail`).
+    *   **Realtime:** Listens for database changes (used to detect new articles for push notification logic).
     *   **Auth (Setup for):** Supabase Auth for user management (not fully implemented in UI yet).
     *   **Storage:** For storing images (used by backend Python scripts).
-    *   **Realtime (Setup for):** For potential live updates.
 *   **Riverpod (`flutter_riverpod`):** State management and dependency injection. Chosen for its robustness, testability, and excellent handling of async operations.
 *   **Supabase Flutter (`supabase_flutter`):** Official Supabase client library for Flutter.
 *   **Shared Preferences (`shared_preferences`):** Local key-value storage for persisting non-critical user preferences (selected team, language).
@@ -145,6 +152,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   **Flutter HTML (`flutter_html`):** Renders HTML content within Flutter widgets, used for article bodies.
 *   **URL Launcher (`url_launcher`):** Launches URLs in the default browser (used for source links in articles).
 *   **Share Plus (`share_plus`):** Invokes the native platform sharing UI.
+*   **(Planned) Firebase Messaging (`firebase_messaging`):** For implementing push notifications.
 
 ## Architecture & Key Concepts
 
@@ -153,7 +161,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   Uses `ProviderScope` at the root (`main.dart`).
 *   Widgets that need to read or interact with state use `ConsumerWidget` or `ConsumerStatefulWidget`.
 *   **Providers Used:**
-    *   `Provider`: For simple dependency injection (e.g., `newsFeedServiceProvider`, `articleDetailServiceProvider`, `preferenceServiceProvider`).
+    *   `Provider`: For simple dependency injection (e.g., `newsFeedServiceProvider`, `articleDetailServiceProvider`, `preferenceServiceProvider`, `realtimeServiceProvider`).
     *   `StateProvider`: For simple synchronous state (e.g., `selectedNavIndexProvider`, `newsFeedDisplayModeProvider`, `currentDetailArticleIdProvider`).
     *   `FutureProvider`: Used previously, potentially useful for one-off async reads.
     *   `FutureProvider.family`: For fetching async data based on a parameter (e.g., `articleDetailProvider(articleId)`).
@@ -161,13 +169,14 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 ### Backend Integration (Supabase)
 
-*   Flutter app interacts with Supabase primarily through **Edge Functions** (e.g., `articlePreviews`, `articleDetail`).
+*   Flutter app interacts with Supabase primarily through **Edge Functions** (e.g., `articlePreviews`, `articleDetail`) for data retrieval and **Realtime** for listening to database changes.
 *   Edge Functions are responsible for querying the database and returning structured data.
 *   **Security (RLS):**
     *   Row Level Security (RLS) is **ENABLED** on relevant database tables.
-    *   Public read policies (`SELECT` for `public` role) are defined based on data status (e.g., `status = 'PUBLISHED'`).
+    *   Public read policies (`SELECT` for `public` role) are defined based on data status (e.g., `status = 'PUBLISHED'` or `release = 'PUBLISHED'`).
     *   Edge Functions called by the Flutter app **use the client's authentication context** (via the `SUPABASE_ANON_KEY` and the `Authorization` header) to ensure RLS policies are enforced.
     *   Backend Python scripts use the `SUPABASE_SERVICE_ROLE_KEY` to bypass RLS for administrative tasks.
+    *   Realtime subscriptions respect RLS policies based on the user's current role (typically `anon` unless authenticated).
 
 ### Navigation (State-Driven Inline Detail View)
 
@@ -182,6 +191,14 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   Navigation *back* from the detail screen occurs via an inline back button within `ArticleDetailScreen` that resets the `currentDetailArticleIdProvider` state to `null`.
 *   This approach keeps the `GlobalAppBar` (with logo, title, potential menu/share/refresh actions) constant across views.
 
+### Real-time Updates (Supabase Realtime)
+
+*   The `RealtimeService` class encapsulates the logic for listening to database changes via Supabase Realtime.
+*   It is initialized via the `realtimeServiceProvider` (Riverpod Provider).
+*   Currently, it subscribes to `INSERT` events on the `NewsArticles` table.
+*   When a new article is inserted, the service checks if its `release` status is `'PUBLISHED'` and if its `team` ID matches the numeric equivalent of the user's currently selected favorite team (read from `selectedTeamNotifierProvider`).
+*   If a match is found, it logs a confirmation message, serving as the trigger point for future push notification logic.
+
 ### Theming & Styling
 
 *   A global theme is defined in `lib/core/theme/app_theme.dart` using `ThemeData`.
@@ -192,7 +209,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 ### Data Fetching & Services
 
-*   Network calls to Supabase Edge Functions are encapsulated within **Service classes** (e.g., `NewsFeedService`, `ArticleDetailService`) located in the `data` folder of relevant features.
+*   Network calls to Supabase Edge Functions are encapsulated within **Service classes** (e.g., `NewsFeedService`, `ArticleDetailService`) located in the `data` folder of relevant features or `core/services`.
 *   Riverpod providers (`newsFeedServiceProvider`, `articleDetailServiceProvider`) provide service instances.
 *   Widgets interact with providers (`paginatedArticlesProvider`, `articleDetailProvider`), which handle async states and call services.
 
@@ -207,7 +224,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 *   `shared_preferences` is used via `PreferenceService` to store:
     *   User's selected language override.
-    *   User's selected favorite team ID.
+    *   User's selected favorite team ID (abbreviation).
 
 ### Responsiveness
 
@@ -230,14 +247,14 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 ## Implemented Features
 
 *   **Core Setup:** Flutter project targeting iOS, Android, Web.
-*   **Supabase Integration:** Initialization, secure credential loading, Edge Function interaction via Services.
+*   **Supabase Integration:** Initialization, secure credential loading, Edge Function interaction, Realtime subscription setup.
 *   **Global Theme:** Consistent app styling.
 *   **Adaptive Navigation (State-Driven):**
     *   Persistent `GlobalAppBar`.
     *   Bottom navigation bar (mobile) / Drawer (desktop/web) for main sections.
     *   Article detail view shown *inline* within the main layout, controlled by Riverpod state.
     *   Inline back button for detail view navigation.
-*   **Language Selection:** Global language picker (EN/DE) with persistence.
+*   **Language Selection:** Global language picker (EN/DE) with persistence (requires UI fix for mobile).
 *   **News Feed (`NewsFeedScreen`):**
     *   Displays list of news article previews from `articlePreviews` Edge Function.
     *   Pull-to-Refresh.
@@ -245,19 +262,20 @@ The project follows a **Feature-First** architecture within the `lib` directory:
     *   Prominent headline story (overall or team-specific).
     *   Conditional "Team Huddle" section.
 *   **Team Huddle Section:** Displays team logo, team headline, placeholders for games/injuries.
-*   **My Team (`MyTeamScreen`):** Allows selection and persistence of a favorite team.
+*   **My Team (`MyTeamScreen`):** Allows selection and persistence of a favorite team. Displays team-specific articles (pagination pending).
 *   **Article Detail (`ArticleDetailScreen`):**
     *   Fetches full article data from `articleDetail` Edge Function based on ID.
-    *   Displays image (with fallback: Image1 > Image2 > Image3), headline, source, date.
+    *   Displays image (with fallback), headline, source, date.
     *   Renders HTML content using `flutter_html` with theme styling.
     *   Provides a tappable link to the original source article using `url_launcher`.
     *   Includes Refresh and Share actions in the persistent `GlobalAppBar`.
     *   Handles loading and error states gracefully.
+*   **Real-time Detection:** Listens for new `PUBLISHED` articles matching the user's selected team via Supabase Realtime (`RealtimeService`).
 *   **Placeholder Screens:** Basic screens for Schedule and More.
 
 ## Running the App
 
-1.  Ensure you have completed the [Getting Started](#getting-started) steps.
+1.  Ensure you have completed the [Getting Started](#getting-started) steps, including enabling Supabase Realtime.
 2.  Select your target device/platform in VS Code or using `flutter devices`.
 3.  Start debugging:
     *   Press `F5` in VS Code.
@@ -265,18 +283,20 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 ## Backend Notes
 
-*   Relies on a **Supabase backend** with deployed **Edge Functions** (`articlePreviews`, `articleDetail`).
-*   **RLS policies** in Supabase control data access.
-*   **Python scripts** (run separately) handle backend data processing using the Service Role Key.
+*   Relies on a **Supabase backend** with deployed **Edge Functions** (`articlePreviews`, `articleDetail`) and **Realtime** enabled on the `NewsArticles` table.
+*   **RLS policies** in Supabase control data access for both Edge Functions and Realtime subscriptions.
+*   **Python scripts** (run separately) likely handle backend data processing/scraping using the Service Role Key.
 
 ## Potential Next Steps
 
+*   Implement Push Notifications using FCM (triggered by the `RealtimeService`).
 *   Implement the `Schedule` and `More` screens.
-*   Implement real user authentication (Supabase Auth) and integrate it with RLS/providers.
+*   Implement real user authentication (Supabase Auth) and integrate it with RLS/providers/token storage.
 *   Connect `UpcomingGamesCard` and `InjuryReportCard` to real data.
 *   Refine error handling and user feedback across the app.
 *   Add unit, widget, and integration tests.
 *   Optimize performance further (image caching, build times, minimize widget rebuilds).
 *   Implement a dark mode theme.
-*   Refactor `teamLogoMap` and `teamFullNameMap` into a more robust data source (e.g., fetched from a `Teams` table in Supabase).
-*   Complete platform-specific sharing logic if needed (e.g., providing different formats).
+*   Refactor `teamLogoMap`, `teamFullNameMap`, and the hardcoded `teamAbbreviationToNumericId` map (see `ToDos.md`).
+*   Complete platform-specific sharing logic if needed.
+*   Address issues listed in `ToDos.md` (Language UI, Asset 404, Team Article Pagination).
