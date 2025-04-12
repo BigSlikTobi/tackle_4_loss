@@ -1,20 +1,20 @@
 // lib/core/navigation/main_navigation_wrapper.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart'; // <-- Import share_plus
+import 'package:share_plus/share_plus.dart';
 import 'package:tackle_4_loss/core/navigation/app_navigation.dart';
 import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/core/providers/preference_provider.dart'; // Import for team ID
+import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
-// Import the article detail provider to read data for sharing
 import 'package:tackle_4_loss/features/article_detail/logic/article_detail_provider.dart';
+import 'package:tackle_4_loss/core/providers/realtime_provider.dart'; // <-- Import the new provider
 
 const double kMobileLayoutBreakpoint = 720.0;
 const double kMaxContentWidth = 1200.0;
 
-// Create a TeamAwareGlobalAppBar widget
+// TeamAwareGlobalAppBar remains the same...
 class TeamAwareGlobalAppBar extends ConsumerWidget
     implements PreferredSizeWidget {
   final bool automaticallyImplyLeading;
@@ -30,21 +30,17 @@ class TeamAwareGlobalAppBar extends ConsumerWidget
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the selected team provider
     final selectedTeamState = ref.watch(selectedTeamNotifierProvider);
-
-    // Get the team ID when available
     final String? teamId = selectedTeamState.maybeWhen(
       data: (id) => id,
       orElse: () => null,
     );
 
-    // Return the GlobalAppBar with the team ID
     return GlobalAppBar(
       automaticallyImplyLeading: automaticallyImplyLeading,
       leading: leading,
       actions: actions,
-      teamId: teamId, // Pass the team ID
+      teamId: teamId,
     );
   }
 
@@ -57,6 +53,12 @@ class MainNavigationWrapper extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // --- Ensure RealtimeService is initialized ---
+    // Reading the provider here ensures its creation logic runs.
+    // Since MainNavigationWrapper is likely always present, this is a decent spot.
+    ref.read(realtimeServiceProvider);
+    // --- End Initialization ---
+
     final selectedIndex = ref.watch(selectedNavIndexProvider);
     final currentLocale = ref.watch(localeNotifierProvider);
     final localeNotifier = ref.read(localeNotifierProvider.notifier);
@@ -79,30 +81,24 @@ class MainNavigationWrapper extends ConsumerWidget {
 
     // --- Build Mobile Layout ---
     if (isMobileLayout) {
+      // ... rest of mobile layout remains the same
       return Scaffold(
         appBar: TeamAwareGlobalAppBar(
-          // Using TeamAwareGlobalAppBar instead of GlobalAppBar
           automaticallyImplyLeading: false,
-          leading: null, // No leading on mobile
-          // --- Add Actions Conditionally ---
+          leading: null,
           actions: [
             if (currentDetailId != null) ...[
-              // Refresh Action for Detail View
               IconButton(
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh',
-                // Read the provider status to potentially show loading during refresh
-                // For simplicity, just invalidate for now.
                 onPressed:
                     () =>
                         ref.invalidate(articleDetailProvider(currentDetailId)),
               ),
-              // Share Action for Detail View
               IconButton(
                 icon: const Icon(Icons.share_outlined),
                 tooltip: 'Share Article',
                 onPressed: () async {
-                  // Read the provider for the current article
                   final articleAsyncValue = ref.read(
                     articleDetailProvider(currentDetailId),
                   );
@@ -113,11 +109,9 @@ class MainNavigationWrapper extends ConsumerWidget {
                       currentLocale.languageCode,
                     );
                     final url = article.sourceUrl;
-                    // Construct the text to share
                     final shareText =
                         url != null ? '$headline\n\n$url' : headline;
                     try {
-                      // Trigger the native share sheet
                       await Share.share(shareText);
                     } catch (e) {
                       debugPrint("Error sharing: $e");
@@ -143,7 +137,6 @@ class MainNavigationWrapper extends ConsumerWidget {
               ),
             ],
           ],
-          // --- End Actions ---
         ),
         bottomNavigationBar:
             currentDetailId == null
@@ -173,23 +166,20 @@ class MainNavigationWrapper extends ConsumerWidget {
     }
     // --- Build Desktop/Tablet Layout ---
     else {
+      // ... rest of desktop/tablet layout remains the same
       final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
       return Scaffold(
         key: scaffoldKey,
         appBar: TeamAwareGlobalAppBar(
-          // Using TeamAwareGlobalAppBar here
           automaticallyImplyLeading: false,
           leading: IconButton(
-            // Always show menu button
             icon: const Icon(Icons.menu),
             tooltip: 'Open Menu',
             onPressed: () => scaffoldKey.currentState?.openDrawer(),
           ),
-          // --- Add Actions Conditionally ---
           actions: [
             if (currentDetailId != null) ...[
-              // Refresh Action for Detail View
               IconButton(
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh',
@@ -197,12 +187,10 @@ class MainNavigationWrapper extends ConsumerWidget {
                     () =>
                         ref.invalidate(articleDetailProvider(currentDetailId)),
               ),
-              // Share Action for Detail View
               IconButton(
                 icon: const Icon(Icons.share_outlined),
                 tooltip: 'Share Article',
                 onPressed: () async {
-                  // Read the provider for the current article
                   final articleAsyncValue = ref.read(
                     articleDetailProvider(currentDetailId),
                   );
@@ -216,11 +204,9 @@ class MainNavigationWrapper extends ConsumerWidget {
                     final shareText =
                         url != null ? '$headline\n\n$url' : headline;
                     try {
-                      // On Desktop/Web, might need sourceRect for iPad popover
                       final box = context.findRenderObject() as RenderBox?;
                       await Share.share(
                         shareText,
-                        // subject: headline, // Optional: Subject for email
                         sharePositionOrigin:
                             box != null
                                 ? box.localToGlobal(Offset.zero) & box.size
@@ -249,12 +235,9 @@ class MainNavigationWrapper extends ConsumerWidget {
                 },
               ),
             ],
-            // You can add other global actions here if needed later
           ],
-          // --- End Actions ---
         ),
         drawer: Drawer(
-          // Drawer remains the same
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
