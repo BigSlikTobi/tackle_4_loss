@@ -71,6 +71,42 @@ final Map<String, String> teamFullNameMap = {
   'WAS': 'Washington Commanders',
 };
 
+// --- Abbreviation to Numeric ID Map ---
+const Map<String, int> teamAbbreviationToNumericId = {
+  'ARI': 1,
+  'ATL': 2,
+  'BAL': 5,
+  'BUF': 6,
+  'CAR': 7,
+  'CHI': 8,
+  'CIN': 9,
+  'CLE': 10,
+  'DAL': 11,
+  'DEN': 12,
+  'DET': 13,
+  'GB': 14,
+  'HOU': 15,
+  'IND': 16,
+  'JAC': 17,
+  'KC': 18,
+  'LV': 19,
+  'LAC': 20,
+  'LAR': 21,
+  'MIA': 22,
+  'MIN': 23,
+  'NE': 24,
+  'NO': 25,
+  'NYG': 26,
+  'NYJ': 27,
+  'PHI': 28,
+  'PIT': 29,
+  'SF': 30,
+  'SEA': 31,
+  'TB': 32,
+  'TEN': 33,
+  'WAS': 34,
+};
+
 // Helper function to get the full asset path
 String getTeamLogoPath(String teamAbbreviation) {
   // Handle potential case issues and missing keys gracefully
@@ -89,4 +125,8 @@ String getTeamFullName(String teamAbbreviation) {
   // Return the full name or the abbreviation if not found
   return teamFullNameMap[teamAbbreviation.toUpperCase()] ??
       teamAbbreviation.toUpperCase();
+}
+
+int? getTeamNumericId(String teamAbbreviation) {
+  return teamAbbreviationToNumericId[teamAbbreviation.toUpperCase()];
 }
