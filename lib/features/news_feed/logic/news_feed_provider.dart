@@ -1,56 +1,83 @@
-// lib/features/news_feed/logic/news_feed_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Adjust import if your preference provider is elsewhere
-import 'package:tackle_4_loss/core/providers/preference_provider.dart';
+// Removed preference provider import as it's not used directly here anymore for headline
+// import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/features/news_feed/data/news_feed_service.dart';
 import 'package:tackle_4_loss/features/news_feed/logic/news_feed_state.dart';
 
-// --- State Providers ---
-
+// State Providers remain the same
 final newsFeedDisplayModeProvider = StateProvider<NewsFeedDisplayMode>(
-  (ref) => NewsFeedDisplayMode.newOnly,
+  // Default might be irrelevant now if AllNewsScreen forces 'all'
+  (ref) => NewsFeedDisplayMode.all,
 );
 
 final newsFeedServiceProvider = Provider<NewsFeedService>((ref) {
   return NewsFeedService();
 });
 
-// --- AsyncNotifierProvider for managing the article list and pagination ---
+// --- Step 1.1: Convert to AsyncNotifierProvider.family ---
+// The family parameter is the filterTeamId (String?)
+final paginatedArticlesProvider = AsyncNotifierProvider.family<
+  PaginatedArticlesNotifier,
+  List<ArticlePreview>,
+  String?
+>(() => PaginatedArticlesNotifier());
 
-final paginatedArticlesProvider =
-    AsyncNotifierProvider<PaginatedArticlesNotifier, List<ArticlePreview>>(
-      () => PaginatedArticlesNotifier(),
-    );
-
-class PaginatedArticlesNotifier extends AsyncNotifier<List<ArticlePreview>> {
+// --- Step 1.2: Update Notifier to use FamilyAsyncNotifier ---
+class PaginatedArticlesNotifier
+    extends FamilyAsyncNotifier<List<ArticlePreview>, String?> {
+  // --- Step 1.3: Internal state is now PER family instance ---
   int? _nextCursor;
   bool _isLoadingMore = false;
   bool _hasMore = true;
+  // Store articles specific to this filter instance
   List<ArticlePreview> _allFetchedArticles = [];
 
+  // --- Step 1.4: Update 'build' to accept family argument 'arg' ---
   @override
-  Future<List<ArticlePreview>> build() async {
+  Future<List<ArticlePreview>> build(
+    String? filterTeamId /* 'arg' is filterTeamId */,
+  ) async {
     final service = ref.watch(newsFeedServiceProvider);
+
+    // --- Reset state for this specific family instance on initial build/rebuild ---
+    _nextCursor = null;
+    _hasMore = true;
+    _isLoadingMore = false;
+    _allFetchedArticles = [];
+    // --- End Reset ---
+
     try {
-      debugPrint("AsyncNotifier build: Fetching initial page...");
-      final response = await service.getArticlePreviews(limit: 20);
+      debugPrint(
+        "AsyncNotifier build (Family: $filterTeamId): Fetching initial page...",
+      );
+      // --- Step 1.5: Pass filterTeamId from arg to the service ---
+      final response = await service.getArticlePreviews(
+        limit: 20,
+        teamId: filterTeamId, // Pass the argument here
+      );
+
       _allFetchedArticles = response.articles;
       _nextCursor = response.nextCursor;
       _hasMore = _nextCursor != null;
       debugPrint(
-        "AsyncNotifier build: Fetched ${_allFetchedArticles.length} articles. Next cursor: $_nextCursor HasMore: $_hasMore",
+        "AsyncNotifier build (Family: $filterTeamId): Fetched ${_allFetchedArticles.length} articles. Next cursor: $_nextCursor HasMore: $_hasMore",
       );
       return _allFetchedArticles;
     } catch (e, stack) {
-      debugPrint("Error in AsyncNotifier build: $e\n$stack");
-      _hasMore = false;
-      throw Exception("Failed to load initial articles: $e");
+      debugPrint(
+        "Error in AsyncNotifier build (Family: $filterTeamId): $e\n$stack",
+      );
+      _hasMore = false; // Ensure no further fetches on error
+      throw Exception(
+        "Failed to load initial articles for filter $filterTeamId: $e",
+      );
     }
   }
 
+  // loadOlder might need rethink later, keeping it simple for now
   Future<void> loadOlder() async {
     debugPrint("loadOlder called.");
     ref.read(newsFeedDisplayModeProvider.notifier).state =
@@ -58,127 +85,67 @@ class PaginatedArticlesNotifier extends AsyncNotifier<List<ArticlePreview>> {
     debugPrint("Display mode set to 'all'.");
   }
 
+  // --- Step 1.6: Update 'fetchNextPage' to use family argument 'arg' ---
   Future<void> fetchNextPage() async {
-    final displayMode = ref.read(newsFeedDisplayModeProvider);
-    if (displayMode != NewsFeedDisplayMode.all ||
-        _isLoadingMore ||
-        !_hasMore ||
-        _nextCursor == null) {
+    // Get the filter for this specific instance from 'arg'
+    final String? filterTeamId = arg;
+
+    // Check state for THIS instance
+    if (_isLoadingMore || !_hasMore || _nextCursor == null) {
       debugPrint(
-        "fetchNextPage skipped: mode=$displayMode, loading=$_isLoadingMore, hasMore=$_hasMore, cursor=$_nextCursor",
+        "fetchNextPage skipped (Family: $filterTeamId): loading=$_isLoadingMore, hasMore=$_hasMore, cursor=$_nextCursor",
       );
       return;
     }
 
-    debugPrint("Fetching next page with cursor: $_nextCursor");
+    debugPrint(
+      "Fetching next page (Family: $filterTeamId) with cursor: $_nextCursor",
+    );
     _isLoadingMore = true;
 
     final service = ref.read(newsFeedServiceProvider);
 
     try {
+      // Pass the filterId for this instance to the service
       final response = await service.getArticlePreviews(
         cursor: _nextCursor!,
         limit: 20,
+        teamId: filterTeamId, // Pass the family argument here
       );
 
+      // Update state for THIS instance
       _nextCursor = response.nextCursor;
       _hasMore = _nextCursor != null;
-
       _allFetchedArticles = [..._allFetchedArticles, ...response.articles];
 
-      state = AsyncData<List<ArticlePreview>>(
-        _allFetchedArticles,
-      ); // Explicit type
+      // Update the state for THIS family instance
+      state = AsyncData<List<ArticlePreview>>(_allFetchedArticles);
       debugPrint(
-        "Next page fetched. Total articles: ${_allFetchedArticles.length}. Has more: $_hasMore",
+        "Next page fetched (Family: $filterTeamId). Total articles: ${_allFetchedArticles.length}. Has more: $_hasMore",
       );
     } catch (e, stack) {
-      debugPrint("Error fetching next page: $e\n$stack");
-      // --- FIX for Error 1 ---
-      // Ensure AsyncError has the correct type and provide previous state
+      debugPrint(
+        "Error fetching next page (Family: $filterTeamId): $e\n$stack",
+      );
+      // Update state with error for THIS instance
       state = AsyncError<List<ArticlePreview>>(
         e,
         stack,
       ).copyWithPrevious(state);
-      _hasMore = false;
+      _hasMore = false; // Stop fetching for this filter on error
     } finally {
       _isLoadingMore = false;
     }
   }
 
-  Future<void> refresh() async {
-    debugPrint("Refresh requested.");
-    _nextCursor = null;
-    _hasMore = true;
-    _isLoadingMore = false;
-    _allFetchedArticles = [];
-    ref.invalidateSelf();
-    await future; // Await the rebuild completion
-    debugPrint("Refresh complete.");
-  }
+  // --- Step 1.7: (Optional Cleanup) Remove internal refresh method ---
+  // UI should use ref.invalidate(provider(filterId)) instead.
+  // Future<void> refresh() async { ... }
 }
 
-// --- Derived Provider for Headline Article ---
+// --- Step 1.8: REMOVE the old derived headline provider ---
+/*
 final headlineArticleProvider = Provider<AsyncValue<ArticlePreview?>>((ref) {
-  final articlesAsyncValue = ref.watch(paginatedArticlesProvider);
-  final selectedTeamAsyncValue = ref.watch(selectedTeamNotifierProvider);
-
-  if (articlesAsyncValue is AsyncLoading ||
-      selectedTeamAsyncValue is AsyncLoading) {
-    return const AsyncValue.loading();
-  }
-
-  // --- FIX for Error 2 & 3 ---
-  if (articlesAsyncValue is AsyncError) {
-    // Provide default values for error and stackTrace if they are null
-    final error = articlesAsyncValue.error ?? Exception("Unknown error");
-    final stackTrace = articlesAsyncValue.stackTrace ?? StackTrace.current;
-    return AsyncValue.error(error, stackTrace);
-  }
-  if (selectedTeamAsyncValue is AsyncError) {
-    debugPrint(
-      "Error loading team preference for headline, falling back to latest overall.",
-    );
-    // Don't return error, proceed to use articlesAsyncValue.value
-  }
-
-  final allArticles = articlesAsyncValue.value ?? [];
-  final selectedTeamId = selectedTeamAsyncValue.valueOrNull;
-
-  if (allArticles.isEmpty) {
-    return const AsyncValue.data(null);
-  }
-
-  List<ArticlePreview> potentialHeadlines = [];
-
-  if (selectedTeamId != null) {
-    potentialHeadlines =
-        allArticles.where((a) => a.teamId == selectedTeamId).toList();
-    if (potentialHeadlines.isEmpty) {
-      potentialHeadlines = allArticles;
-      debugPrint(
-        "No articles for team $selectedTeamId found, using latest overall for headline.",
-      );
-    } else {
-      debugPrint(
-        "Found ${potentialHeadlines.length} articles for team $selectedTeamId for headline consideration.",
-      );
-    }
-  } else {
-    potentialHeadlines = allArticles;
-    debugPrint("No team selected, using latest overall for headline.");
-  }
-
-  if (potentialHeadlines.isEmpty) {
-    return const AsyncValue.data(null);
-  }
-
-  potentialHeadlines.sort((a, b) {
-    final dateA = a.createdAt ?? DateTime(1970);
-    final dateB = b.createdAt ?? DateTime(1970);
-    return dateB.compareTo(dateA);
-  });
-
-  debugPrint("Headline article selected: ID ${potentialHeadlines.first.id}");
-  return AsyncValue.data(potentialHeadlines.first);
+  // ... This logic is no longer suitable ...
 });
+*/

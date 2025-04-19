@@ -7,6 +7,7 @@
 - [Task: Resolve Persistent 404 Asset Loading Error on Web/Desktop](#task-resolve-persistent-404-asset-loading-error-on-webdesktop)
 - [Task: Implement Pagination for Team-Specific Article List](#task-implement-pagination-for-team-specific-article-list)
 - [Task: Implement FCM Token Cleanup Logic in Edge Function](#task-implement-fcm-token-cleanup-logic-in-edge-function)
+- [Task: Investigate and Resolve Realtime Subscription Errors for db-NewsArticles-inserts](#task-investigate-and-resolve-realtime-subscription-errors-for-db-newsarticles-inserts)
 
 ### Medium Priority / User Experience & Refinements
 - [Task: Create Global Language Selection Control for Adaptive UI](#task-create-global-language-selection-control-for-adaptive-ui)
@@ -15,7 +16,6 @@
 - [Task: Refactor Team ID Mapping (Fetch from DB)](#task-refactor-team-id-mapping-fetch-from-db)
 - [Task: Add UI Feedback for Team Preference Saving/DB Update](#task-add-ui-feedback-for-team-preference-savingdb-update)
 - [Task: Improve Background Message Handling Logic](#task-improve-background-message-handling-logic)
-
 
 ### Low Priority / Future Features
 - [Task: (Optional) Support Multiple Team Subscriptions](#task-optional-support-multiple-team-subscriptions)
@@ -101,6 +101,27 @@ Add logic to the `sendPushNotification` Edge Function to detect specific FCM API
 1.  **Edge Function (`sendFcmMessage` helper):** Analyze the response from the `fetch` call to the FCM API within the helper function.
 2.  **Error Codes:** Check the response status (e.g., 400, 404) and the error body (which might be JSON or plain text) for specific FCM error codes like `UNREGISTERED` or `INVALID_ARGUMENT`. Refer to [FCM Error Codes Documentation](https://firebase.google.com/docs/cloud-messaging/manage-tokens#detect-invalid-token-responses-from-the-fcm-backend).
 3.  **Delete Token:** If an unrecoverable token error is detected for a specific `token`, call `supabaseClient.from('device_tokens').delete().eq('token', token)` within the Edge Function to remove the stale entry. Handle potential errors during deletion gracefully (e.g., log them but don't fail the entire function).
+
+### Task: Investigate and Resolve Realtime Subscription Errors for `db-NewsArticles-inserts`
+
+**Problem:**
+The application console frequently logs `RealtimeSubscribeStatus.channelError` accompanied by `RealtimeCloseEvent(code: 1000)` for the `db-NewsArticles-inserts` channel. While the closure code `1000` is normal, the recurring nature indicates the subscription isn't stable or might be misconfigured/unnecessary.
+
+**Goal:**
+Determine if the `db-NewsArticles-inserts` Realtime subscription is actively required by any feature. If it is required, identify and fix the cause of the repeated connection closures. If it is not required (e.g., if push notifications via Edge Functions are the sole mechanism for reacting to inserts), remove the subscription code to eliminate the errors and potential resource usage.
+
+**Possible Areas to Investigate:**
+*   **Code Audit:** Search the codebase (especially services like `RealtimeService` or initialization logic) for `.channel('db-NewsArticles-inserts').subscribe(...)`.
+*   **Feature Dependency:** Verify if any UI component relies on this specific channel for live updates, distinct from the push notification flow.
+*   **Configuration:** Review the subscription setup, including any error or close handlers.
+*   **Redundancy:** Confirm if the Webhook -> Edge Function -> Push Notification flow described in `README.md` makes this specific Realtime channel redundant for the core functionality.
+*   **Client/Network Issues:** Consider if client-side factors (app lifecycle, backgrounding) or network instability could be contributing, although the `1000` code suggests a clean closure.
+
+**Acceptance Criteria:**
+*   The recurring `RealtimeSubscribeStatus.channelError` for `db-NewsArticles-inserts` no longer appears in the application logs.
+*   A clear determination is made whether the channel is needed.
+*   If needed, the subscription remains stable during typical app usage.
+*   If not needed, the relevant subscription code is removed.
 
 ---
 ## Medium Priority / User Experience & Refinements
