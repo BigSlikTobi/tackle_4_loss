@@ -1,4 +1,3 @@
-// lib/features/news_feed/ui/news_feed_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart';
@@ -7,13 +6,12 @@ import 'package:tackle_4_loss/features/news_feed/ui/widgets/headline_story_card.
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/article_list_item.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
-// Import the new placeholder cards
 import 'package:tackle_4_loss/features/my_team/ui/widgets/team_huddle_section.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
-// Import breakpoint
 
 class NewsFeedScreen extends ConsumerStatefulWidget {
+  // Make it const if possible
   const NewsFeedScreen({super.key});
 
   @override
@@ -27,107 +25,130 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    // Ensure display mode starts correctly for the main feed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        // Default to 'newOnly' for the main feed maybe? Or keep 'all'? Let's keep 'all' for consistency now.
+        ref.read(newsFeedDisplayModeProvider.notifier).state =
+            NewsFeedDisplayMode.all;
+      }
+    });
   }
 
   @override
   void dispose() {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
-    super.dispose(); // Correctly calls super.dispose()
+    super.dispose();
   }
 
   void _onScroll() {
-    // Trigger loading when near the end and in 'all' mode
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 300) {
-      // Threshold
       final currentMode = ref.read(newsFeedDisplayModeProvider);
       if (currentMode == NewsFeedDisplayMode.all) {
-        // Use read inside callbacks/listeners
-        ref.read(paginatedArticlesProvider.notifier).fetchNextPage();
+        // --- FIX: Call fetchNextPage on the correct family instance (null filter) ---
+        ref.read(paginatedArticlesProvider(null).notifier).fetchNextPage();
+        // --- End Fix ---
       }
     }
   }
 
-  // Handle pull-to-refresh
   Future<void> _handleRefresh() async {
-    // Call refresh on the notifier. Await completion.
-    await ref.read(paginatedArticlesProvider.notifier).refresh();
+    // --- FIX: Invalidate the correct family instance (null filter) ---
+    ref.invalidate(paginatedArticlesProvider(null));
+    // Optionally await
+    // await ref.read(paginatedArticlesProvider(null).future);
+    // --- End Fix ---
   }
 
   @override
   Widget build(BuildContext context) {
-    // Watch providers
-    final articlesAsyncValue = ref.watch(paginatedArticlesProvider);
-    final headlineAsyncValue = ref.watch(headlineArticleProvider);
+    // --- FIX: Watch the correct family instance (null filter) ---
+    final articlesAsyncValue = ref.watch(paginatedArticlesProvider(null));
+    // --- End Fix ---
+
+    // Watch other providers needed for headline/huddle logic
     final displayMode = ref.watch(newsFeedDisplayModeProvider);
     final selectedTeamAsyncValue = ref.watch(selectedTeamNotifierProvider);
-    final articlesNotifier = ref.read(paginatedArticlesProvider.notifier);
+
+    // --- FIX: Get the correct notifier instance (null filter) ---
+    final articlesNotifier = ref.read(paginatedArticlesProvider(null).notifier);
+    // --- End Fix ---
 
     return Scaffold(
+      // Keep Scaffold unless this screen itself changes
       body: RefreshIndicator(
         onRefresh: _handleRefresh,
         child: articlesAsyncValue.when(
           data: (allFetchedArticles) {
-            // Get headline and team selection safely
-            final headlineArticle = headlineAsyncValue.valueOrNull;
+            // This is the FULL list now
+
+            // --- Re-implement Headline Logic for Main Feed ---
+            // Needs to consider selected team preference for the huddle section headline
             final selectedTeamId = selectedTeamAsyncValue.valueOrNull;
+            ArticlePreview?
+            headlineArticleForHuddle; // Headline specifically for the huddle
+            ArticlePreview?
+            generalHeadline; // Headline for the top card if no team/huddle
 
-            // UPDATED: Always show TeamHuddleSection when a team is selected,
-            // regardless of whether there's a headline article for that team or not
-            final bool showTeamHuddle = selectedTeamId != null;
-
-            // Determine which headline article to pass to TeamHuddleSection
-            // If there's a headline matching the selected team, use it
-            // Otherwise, pass null to trigger the placeholder UI
-            ArticlePreview? teamHeadlineArticle;
-            if (selectedTeamId != null && headlineArticle != null) {
-              if (headlineArticle.teamId == selectedTeamId) {
-                teamHeadlineArticle = headlineArticle;
-              } else {
-                // Check if any article matches the selected team to use as a headline
-                teamHeadlineArticle =
+            if (allFetchedArticles.isNotEmpty) {
+              if (selectedTeamId != null) {
+                // Try find latest article matching the selected team
+                headlineArticleForHuddle =
                     allFetchedArticles
                         .where((a) => a.teamId == selectedTeamId)
+                        // .sortedBy(...) // Add sorting by date if needed
                         .firstOrNull;
               }
+              // If no specific team headline, or no team selected, use the latest overall
+              generalHeadline = allFetchedArticles.first;
             }
+            // --- End Headline Logic ---
+
+            final bool showTeamHuddle = selectedTeamId != null;
+
+            // Determine which headline article is *the* main one to exclude from the list
+            // If showing huddle, use its headline; otherwise, use general headline
+            final ArticlePreview? primaryHeadlineToExclude =
+                showTeamHuddle ? headlineArticleForHuddle : generalHeadline;
 
             // Filter the main list articles
-            // Always exclude the headline article (whether it's team specific or overall latest)
             final List<ArticlePreview> listArticlesToShow;
             if (displayMode == NewsFeedDisplayMode.newOnly) {
+              // This mode might be removed if AllNews is the primary place for non-new
               listArticlesToShow =
                   allFetchedArticles
                       .where(
                         (a) =>
                             a.status.toUpperCase() == 'NEW' &&
-                            a.id != headlineArticle?.id,
+                            a.id != primaryHeadlineToExclude?.id,
                       )
                       .toList();
             } else {
+              // displayMode == NewsFeedDisplayMode.all
               listArticlesToShow =
                   allFetchedArticles
-                      .where((a) => a.id != headlineArticle?.id)
+                      .where((a) => a.id != primaryHeadlineToExclude?.id)
                       .toList();
             }
 
             // --- Handle Empty States ---
-            if (headlineArticle == null &&
+            if (generalHeadline == null &&
                 listArticlesToShow.isEmpty &&
                 !showTeamHuddle) {
-              // If everything is empty and we aren't showing the huddle
-              if (articlesAsyncValue is AsyncLoading ||
-                  headlineAsyncValue is AsyncLoading ||
+              if (articlesAsyncValue.isLoading ||
                   selectedTeamAsyncValue is AsyncLoading) {
                 return const LoadingIndicator();
               } else if (displayMode == NewsFeedDisplayMode.newOnly) {
+                // Pass the correct notifier instance to the helper
                 return _buildEmptyStateUI(
                   context,
                   displayMode,
                   articlesNotifier,
                 );
               } else {
+                // Keep scrollable for refresh
                 return const CustomScrollView(
                   physics: AlwaysScrollableScrollPhysics(),
                   slivers: [
@@ -139,37 +160,36 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
               }
             }
 
-            // --- Build Content with CustomScrollView ---
+            // --- Build Content ---
             return CustomScrollView(
               controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
                 // --- Conditional Section: Team Huddle OR Default Headline ---
                 if (showTeamHuddle)
-                  // 1a. Show Team Huddle Section
                   SliverToBoxAdapter(
                     child: TeamHuddleSection(
-                      teamId: selectedTeamId, // Remove unnecessary ! operator
-                      headlineArticle:
-                          teamHeadlineArticle, // Use the potentially null team headline article
+                      teamId: selectedTeamId,
+                      // Pass the specific huddle headline (can be null if no matching article found)
+                      headlineArticle: headlineArticleForHuddle,
                     ),
                   )
-                else if (headlineArticle != null)
-                  // 1b. Show Default Headline Card (if no team selected but headline exists)
+                else if (generalHeadline != null)
+                  // Show general headline if no team huddle is displayed
                   SliverToBoxAdapter(
-                    child: HeadlineStoryCard(article: headlineArticle),
+                    child: HeadlineStoryCard(article: generalHeadline),
                   )
-                else if (headlineAsyncValue is AsyncLoading)
-                  // 1c. Show Loading placeholder if headline is still loading
+                else if (articlesAsyncValue.isLoading ||
+                    selectedTeamAsyncValue is AsyncLoading)
+                  // Show loading if still fetching initial data or team preference
                   const SliverToBoxAdapter(
                     child: Padding(
                       padding: EdgeInsets.all(16.0),
                       child: LoadingIndicator(),
                     ),
                   ),
-                // --- End Conditional Section ---
 
-                // 2. Main Article List (SliverList)
+                // --- Main Article List (SliverList) ---
                 SliverPadding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 8.0,
@@ -178,15 +198,15 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                   sliver: SliverList(
                     delegate: SliverChildBuilderDelegate(
                       (context, index) {
-                        // --- Logic for button/loader at the end ---
                         if (index == listArticlesToShow.length) {
                           if (displayMode == NewsFeedDisplayMode.newOnly) {
+                            // Pass the correct notifier instance
                             return _buildLoadOlderButton(articlesNotifier);
                           } else {
-                            final bool isLoadingMore =
-                                articlesAsyncValue is AsyncLoading &&
-                                listArticlesToShow.isNotEmpty;
-                            if (isLoadingMore) {
+                            // displayMode == NewsFeedDisplayMode.all
+                            // Check loading state of the family(null) instance
+                            if (articlesAsyncValue.isLoading &&
+                                listArticlesToShow.isNotEmpty) {
                               return const Padding(
                                 padding: EdgeInsets.all(16.0),
                                 child: LoadingIndicator(),
@@ -196,7 +216,6 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                             }
                           }
                         }
-                        // Render article item
                         return ArticleListItem(
                           article: listArticlesToShow[index],
                         );
@@ -204,7 +223,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                       childCount:
                           listArticlesToShow.length +
                           (displayMode == NewsFeedDisplayMode.newOnly ||
-                                  (articlesAsyncValue is AsyncLoading &&
+                                  (articlesAsyncValue.isLoading &&
                                       listArticlesToShow.isNotEmpty &&
                                       displayMode == NewsFeedDisplayMode.all)
                               ? 1
@@ -216,24 +235,25 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
             );
           },
           error: (error, stackTrace) {
-            /* ... Error UI ... */
+            // Pass the correct notifier instance
             return _buildErrorStateUI(articlesNotifier);
           },
-          loading:
-              () => const LoadingIndicator(), // Initial full screen loading
+          loading: () => const LoadingIndicator(),
         ),
       ),
     );
   }
 
-  // --- Helper Methods ---
+  // --- Helper Methods - Ensure they use the correct notifier type ---
+  // Note: PaginatedArticlesNotifier is now FamilyAsyncNotifier, but instance methods are same
 
   Widget _buildLoadOlderButton(PaginatedArticlesNotifier notifier) {
+    // This button might become less relevant if 'newOnly' mode is removed
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 16.0),
       child: Center(
         child: ElevatedButton(
-          onPressed: () => notifier.loadOlder(),
+          onPressed: () => notifier.loadOlder(), // loadOlder doesn't need args
           child: const Text('Load Older Articles'),
         ),
       ),
@@ -245,8 +265,8 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
     NewsFeedDisplayMode displayMode,
     PaginatedArticlesNotifier notifier,
   ) {
+    // This helper needs the specific notifier instance if calling methods on it
     if (displayMode == NewsFeedDisplayMode.newOnly) {
-      // Return within a scrollable view for pull-to-refresh
       return CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
@@ -258,7 +278,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                   const Text('No new articles found.'),
                   const SizedBox(height: 20),
                   ElevatedButton(
-                    onPressed: () => notifier.loadOlder(),
+                    onPressed: () => notifier.loadOlder(), // Pass instance here
                     child: const Text('Load Older Articles'),
                   ),
                 ],
@@ -280,20 +300,24 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   }
 
   Widget _buildErrorStateUI(PaginatedArticlesNotifier notifier) {
+    // This helper needs the specific notifier instance if calling methods on it
     return RefreshIndicator(
-      // Ensure error state can be refreshed
-      onRefresh: _handleRefresh,
+      onRefresh: _handleRefresh, // _handleRefresh uses ref.invalidate correctly
       child: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         slivers: [
           SliverFillRemaining(
             child: ErrorMessageWidget(
               message: 'Failed to load news feed.',
-              onRetry: () => notifier.refresh(),
+              // Use invalidate directly in onRetry for simplicity
+              onRetry: () => ref.invalidate(paginatedArticlesProvider(null)),
+              // Or call notifier.refresh() if it existed and handled args
             ),
           ),
         ],
       ),
     );
   }
+
+  // --- End Helper Methods ---
 }

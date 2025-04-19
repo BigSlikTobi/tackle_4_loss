@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
-import 'package:tackle_4_loss/core/constants/team_constants.dart';
 
 // Keep as ConsumerWidget only if other passed actions might need ref
 class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
@@ -31,24 +30,10 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
       ...(actions ?? []),
     ]; // Default to empty list if null
 
-    // Add team logo to actions if teamId is provided
-    if (teamId != null && teamLogoMap.containsKey(teamId)) {
-      effectiveActions.add(
-        Padding(
-          padding: const EdgeInsets.only(right: 12.0),
-          child: SizedBox(
-            width: 32,
-            height: 32,
-            child: Image.asset(
-              'assets/team_logos/${teamLogoMap[teamId]}.png',
-              fit: BoxFit.contain,
-              errorBuilder:
-                  (context, error, stackTrace) => const SizedBox.shrink(),
-            ),
-          ),
-        ),
-      );
-    }
+    // LOG: Team logo in AppBar removed. If you see a logo here, this is a bug.
+    debugPrint('GlobalAppBar: team logo in AppBar has been removed. teamId=');
+    debugPrint(teamId);
+    debugPrint('');
 
     return AppBar(
       backgroundColor: AppColors.backgroundLight,

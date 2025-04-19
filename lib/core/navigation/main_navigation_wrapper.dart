@@ -1,4 +1,3 @@
-// lib/core/navigation/main_navigation_wrapper.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -9,7 +8,11 @@ import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 import 'package:tackle_4_loss/features/article_detail/logic/article_detail_provider.dart';
-import 'package:tackle_4_loss/core/providers/realtime_provider.dart'; // <-- Import the new provider
+import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
+import 'package:tackle_4_loss/core/constants/team_constants.dart';
+
+// --- Import the new sheet content widget ---
+import 'package:tackle_4_loss/features/more/ui/more_options_sheet_content.dart';
 
 const double kMobileLayoutBreakpoint = 720.0;
 const double kMaxContentWidth = 1200.0;
@@ -51,13 +54,27 @@ class TeamAwareGlobalAppBar extends ConsumerWidget
 class MainNavigationWrapper extends ConsumerWidget {
   const MainNavigationWrapper({super.key});
 
+  // --- Helper to show the bottom sheet ---
+  void _showMoreOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      // Make it scrollable if content overflows
+      isScrollControlled: true,
+      // Give it rounded corners matching the theme
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
+      ),
+      // Use a builder to return the content widget
+      builder: (BuildContext sheetContext) {
+        // Pass the context from the builder
+        return const MoreOptionsSheetContent();
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // --- Ensure RealtimeService is initialized ---
-    // Reading the provider here ensures its creation logic runs.
-    // Since MainNavigationWrapper is likely always present, this is a decent spot.
     ref.read(realtimeServiceProvider);
-    // --- End Initialization ---
 
     final selectedIndex = ref.watch(selectedNavIndexProvider);
     final currentLocale = ref.watch(localeNotifierProvider);
@@ -68,6 +85,11 @@ class MainNavigationWrapper extends ConsumerWidget {
     final bool isMobileLayout = screenWidth < kMobileLayoutBreakpoint;
 
     final screens = appNavItems.map((item) => item.screen).toList();
+
+    // --- Find the index of the "More" item ---
+    final moreItemIndex = appNavItems.indexWhere(
+      (item) => item.label == 'More',
+    );
 
     final Widget mainIndexedStack = IndexedStack(
       index: selectedIndex,
@@ -81,13 +103,14 @@ class MainNavigationWrapper extends ConsumerWidget {
 
     // --- Build Mobile Layout ---
     if (isMobileLayout) {
-      // ... rest of mobile layout remains the same
       return Scaffold(
         appBar: TeamAwareGlobalAppBar(
+          // AppBar setup remains the same...
           automaticallyImplyLeading: false,
           leading: null,
           actions: [
             if (currentDetailId != null) ...[
+              // Share/Refresh actions remain...
               IconButton(
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh',
@@ -139,23 +162,75 @@ class MainNavigationWrapper extends ConsumerWidget {
           ],
         ),
         bottomNavigationBar:
-            currentDetailId == null
+            currentDetailId ==
+                    null // Only show nav bar if not in detail view
                 ? BottomNavigationBar(
                   currentIndex: selectedIndex,
                   onTap: (index) {
-                    ref.read(currentDetailArticleIdProvider.notifier).state =
-                        null;
-                    ref.read(selectedNavIndexProvider.notifier).state = index;
+                    // --- If "More" is tapped, show sheet, otherwise navigate ---
+                    if (index == moreItemIndex) {
+                      _showMoreOptions(context);
+                    } else {
+                      ref.read(currentDetailArticleIdProvider.notifier).state =
+                          null;
+                      ref.read(selectedNavIndexProvider.notifier).state = index;
+                    }
+                    // --- End modification ---
                   },
+                  showSelectedLabels: false,
+                  showUnselectedLabels: false,
                   items:
-                      appNavItems
-                          .map(
-                            (item) => BottomNavigationBarItem(
+                      appNavItems.asMap().entries.map((entry) {
+                        final item = entry.value;
+                        // My Team Logo logic remains the same...
+                        if (item.label == 'My Team') {
+                          final selectedTeamState = ref.watch(
+                            selectedTeamNotifierProvider,
+                          );
+                          final String? teamId = selectedTeamState.maybeWhen(
+                            data: (id) => id,
+                            orElse: () => null,
+                          );
+                          if (teamId != null &&
+                              teamLogoMap.containsKey(teamId)) {
+                            debugPrint(
+                              'BottomNav: Showing team logo for My Team tab: teamId=' +
+                                  teamId,
+                            );
+                            return BottomNavigationBarItem(
+                              icon: Image.asset(
+                                'assets/team_logos/' +
+                                    teamLogoMap[teamId]! +
+                                    '.png',
+                                width: 28,
+                                height: 28,
+                                fit: BoxFit.contain,
+                                errorBuilder: (context, error, stackTrace) {
+                                  debugPrint(
+                                    'BottomNav: Error loading team logo for teamId=' +
+                                        teamId,
+                                  );
+                                  return Icon(item.icon);
+                                },
+                              ),
+                              label: '',
+                            );
+                          } else {
+                            debugPrint(
+                              'BottomNav: No team selected, using default icon for My Team tab',
+                            );
+                            return BottomNavigationBarItem(
                               icon: Icon(item.icon),
-                              label: item.label,
-                            ),
-                          )
-                          .toList(),
+                              label: '',
+                            );
+                          }
+                        } else {
+                          return BottomNavigationBarItem(
+                            icon: Icon(item.icon),
+                            label: '',
+                          );
+                        }
+                      }).toList(),
                   type: BottomNavigationBarType.fixed,
                   selectedItemColor: Theme.of(context).colorScheme.primary,
                   unselectedItemColor: Colors.grey[600],
@@ -166,12 +241,12 @@ class MainNavigationWrapper extends ConsumerWidget {
     }
     // --- Build Desktop/Tablet Layout ---
     else {
-      // ... rest of desktop/tablet layout remains the same
       final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
       return Scaffold(
         key: scaffoldKey,
         appBar: TeamAwareGlobalAppBar(
+          // AppBar setup remains the same...
           automaticallyImplyLeading: false,
           leading: IconButton(
             icon: const Icon(Icons.menu),
@@ -180,6 +255,7 @@ class MainNavigationWrapper extends ConsumerWidget {
           ),
           actions: [
             if (currentDetailId != null) ...[
+              // Share/Refresh actions remain...
               IconButton(
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh',
@@ -261,10 +337,20 @@ class MainNavigationWrapper extends ConsumerWidget {
                     context,
                   ).colorScheme.primary.withAlpha(26),
                   onTap: () {
-                    ref.read(currentDetailArticleIdProvider.notifier).state =
-                        null;
-                    ref.read(selectedNavIndexProvider.notifier).state = i;
+                    // --- Close drawer FIRST ---
                     Navigator.pop(context);
+                    // --- If "More" is tapped, show sheet, otherwise navigate ---
+                    if (i == moreItemIndex) {
+                      // Use a slight delay if needed, otherwise call directly
+                      // Future.delayed(Duration(milliseconds: 100), () {
+                      _showMoreOptions(context);
+                      // });
+                    } else {
+                      ref.read(currentDetailArticleIdProvider.notifier).state =
+                          null;
+                      ref.read(selectedNavIndexProvider.notifier).state = i;
+                    }
+                    // --- End modification ---
                   },
                 ),
               const Divider(indent: 16, endIndent: 16),
@@ -281,10 +367,10 @@ class MainNavigationWrapper extends ConsumerWidget {
                 groupValue: currentLocale,
                 onChanged: (Locale? value) {
                   if (value != null && currentLocale != value) {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Pop drawer first
                     localeNotifier.setLocale(value);
                   } else if (value != null) {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Pop drawer even if no change
                   }
                 },
                 selected: currentLocale.languageCode == 'en',
@@ -296,10 +382,10 @@ class MainNavigationWrapper extends ConsumerWidget {
                 groupValue: currentLocale,
                 onChanged: (Locale? value) {
                   if (value != null && currentLocale != value) {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Pop drawer first
                     localeNotifier.setLocale(value);
                   } else if (value != null) {
-                    Navigator.pop(context);
+                    Navigator.pop(context); // Pop drawer even if no change
                   }
                 },
                 selected: currentLocale.languageCode == 'de',
