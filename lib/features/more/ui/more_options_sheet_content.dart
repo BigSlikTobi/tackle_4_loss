@@ -87,7 +87,6 @@ class MoreOptionsSheetContent extends ConsumerWidget {
             title: 'Teams',
             onTap: () {
               debugPrint('Teams tapped');
-              // TODO: Implement navigation to a team selection or overview screen
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(
                   content: Text('Navigate to Teams (Not Implemented)'),
@@ -130,7 +129,6 @@ class MoreOptionsSheetContent extends ConsumerWidget {
                     tooltip: 'Join our Discord',
                     onPressed: () {
                       debugPrint('Discord tapped');
-                      // TODO: Implement URL launching
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Launch Discord (Not Implemented)'),
@@ -143,7 +141,6 @@ class MoreOptionsSheetContent extends ConsumerWidget {
                     tooltip: 'Follow us on Instagram',
                     onPressed: () {
                       debugPrint('Instagram tapped');
-                      // TODO: Implement URL launching
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Launch Instagram (Not Implemented)'),
@@ -156,7 +153,6 @@ class MoreOptionsSheetContent extends ConsumerWidget {
                     tooltip: 'Subscribe on YouTube',
                     onPressed: () {
                       debugPrint('YouTube tapped');
-                      // TODO: Implement URL launching
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
                           content: Text('Launch YouTube (Not Implemented)'),

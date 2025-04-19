@@ -61,7 +61,7 @@ class SettingsScreen extends ConsumerWidget {
                         isCurrentlySelected
                             ? [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
+                                color: Colors.black.withValues(alpha: 0.1),
                                 blurRadius: 4,
                                 offset: const Offset(0, 1),
                               ),
@@ -118,7 +118,7 @@ class SettingsScreen extends ConsumerWidget {
               // Wrap the potentially long text with Flexible
               Flexible(
                 child: Text(
-                  getTeamFullName(newTeamId) + '?',
+                  '${getTeamFullName(newTeamId)}?',
                   // softWrap: true, // Already true by default for Text
                   textAlign: TextAlign.start, // Adjust alignment if needed
                 ),
@@ -296,7 +296,9 @@ class SettingsScreen extends ConsumerWidget {
                 },
                 selected: currentLocale.languageCode == 'en',
                 activeColor: theme.colorScheme.primary,
-                selectedTileColor: theme.colorScheme.primary.withOpacity(0.05),
+                selectedTileColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.05,
+                ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
               ),
               RadioListTile<Locale>(
@@ -310,7 +312,9 @@ class SettingsScreen extends ConsumerWidget {
                 },
                 selected: currentLocale.languageCode == 'de',
                 activeColor: theme.colorScheme.primary,
-                selectedTileColor: theme.colorScheme.primary.withOpacity(0.05),
+                selectedTileColor: theme.colorScheme.primary.withValues(
+                  alpha: 0.05,
+                ),
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
               ),
 

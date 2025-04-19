@@ -12,8 +12,8 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
 7.  [Architecture & Key Concepts](#architecture--key-concepts)
     *   [State Management (Riverpod)](#state-management-riverpod)
     *   [Backend Integration (Supabase)](#backend-integration-supabase)
-    *   [Navigation (State-Driven Inline Detail View)](#navigation-state-driven-inline-detail-view)
-    *   [Push Notifications (Firebase + Supabase)](#push-notifications-firebase--supabase) # Added
+    *   [Navigation (State-Driven Inline Detail View & Overlays)](#navigation-state-driven-inline-detail-view--overlays) <!-- Updated -->
+    *   [Push Notifications (Firebase + Supabase)](#push-notifications-firebase--supabase)
     *   [Theming & Styling](#theming--styling)
     *   [Data Fetching & Services](#data-fetching--services)
     *   [Localization](#localization)
@@ -24,13 +24,13 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
 8.  [Implemented Features](#implemented-features)
 9.  [Running the App](#running-the-app)
 10. [Backend Notes](#backend-notes)
-11. [Potential Next Steps (See ToDos.md)](#potential-next-steps-see-todosmd) # Updated link
+11. [Potential Next Steps (See ToDos.md)](#potential-next-steps-see-todosmd)
 
 ## Overview
 
 Tackle4Loss aims to provide users with up-to-date American Football news curated from different NFL Source News Sites like NFL.com or ESPN.com. Users can select their favorite team and receive push notifications for new, relevant articles.
 
-This Flutter application serves as the user interface, interacting with a Supabase backend for data storage, retrieval (via Edge Functions), and push notification triggering (via Database Webhooks and Edge Functions). The app is designed to be responsive, adapting its layout for mobile, tablet, and web screens, and supports push notifications on iOS, Android, and Web.
+This Flutter application serves as the user interface, interacting with a Supabase backend for data storage, retrieval (via Edge Functions), and push notification triggering (via Database Webhooks and Edge Functions). The app is designed to be responsive, adapting its layout for mobile, tablet, and web screens, supports push notifications on iOS, Android, and Web, and provides user settings for customization.
 
 ## Prerequisites
 
@@ -85,6 +85,7 @@ This Flutter application serves as the user interface, interacting with a Supaba
 4.  **Deploy Supabase Edge Function:**
     *   Navigate to the `supabase/functions` directory if needed.
     *   Deploy the notification function: `supabase functions deploy sendPushNotification --no-verify-jwt`
+    *   Deploy the data functions: `supabase functions deploy articlePreviews`, `supabase functions deploy articleDetail` (or deploy all).
 5.  **Configure Supabase Database Webhook:**
     *   Set up a Database Webhook in the Supabase Dashboard:
         *   **Name:** `notifyOnNewArticle` (or similar)
@@ -136,31 +137,35 @@ The project follows a **Feature-First** architecture within the `lib` directory:
     *   `main.dart`: App entry point, Firebase/Supabase/DotEnv initialization, background notification handler setup.
     *   `firebase_options.dart`: Auto-generated Firebase configuration.
     *   `core/`: Shared code across features.
-        *   `constants/`: App-wide constants (e.g., `team_constants.dart` including ID mapping).
+        *   `constants/`: App-wide constants (e.g., `team_constants.dart`, `layout_constants.dart`).
         *   `models/`: Shared data models.
         *   `navigation/`: Navigation setup (`NavItem`, `MainNavigationWrapper`, `app_navigation.dart`).
-        *   `providers/`: Shared Riverpod providers (e.g., `locale_provider.dart`, `navigation_provider.dart`, `preference_provider.dart`, `notification_provider.dart`).
-        *   `services/`: Shared services (e.g., `preference_service.dart`, `notification_service.dart`, `realtime_service.dart` - Note: RealtimeService is no longer the push trigger).
+        *   `providers/`: Shared Riverpod providers (e.g., `locale_provider.dart`, `navigation_provider.dart`, `preference_provider.dart`, `notification_provider.dart`, `realtime_provider.dart`).
+        *   `services/`: Shared services (e.g., `preference_service.dart`, `notification_service.dart`, `realtime_service.dart`).
         *   `theme/`: Global theme data (`app_colors.dart`, `app_theme.dart`).
         *   `utils/`: Utility functions.
         *   `widgets/`: Common reusable widgets (e.g., `GlobalAppBar`, `LoadingIndicator`, `ErrorMessageWidget`).
     *   `features/`: Feature modules.
         *   `news_feed/`
             *   `data/`: Models (`ArticlePreview`), Services (`NewsFeedService`).
-            *   `logic/`: Riverpod Providers (`news_feed_provider.dart`, `news_feed_state.dart`).
+            *   `logic/`: Riverpod Providers (`news_feed_provider.dart` - Family Provider, `news_feed_state.dart`).
             *   `ui/`: Screens (`NewsFeedScreen`), Widgets (`ArticleListItem`, `HeadlineStoryCard`).
         *   `my_team/`
             *   `data/`: (If models/services specific to this feature are added)
-            *   `logic/`: Providers (`selectedTeamNotifierProvider` - Modified to update notification subscription).
+            *   `logic/`: Providers (`selectedTeamNotifierProvider`).
             *   `ui/`: Screens (`MyTeamScreen`), Widgets (`UpcomingGamesCard`, `InjuryReportCard`, `TeamHuddleSection`, `TeamSelectionDropdown`, `TeamArticleList`).
         *   `article_detail/`
             *   `data/`: Models (`ArticleDetail`), Services (`ArticleDetailService`).
             *   `logic/`: Riverpod Providers (`article_detail_provider.dart`).
             *   `ui/`: Screens (`ArticleDetailScreen`).
+        *   `all_news/` <!-- Added -->
+            *   `ui/`: Screens (`AllNewsScreen` - Displays unfiltered news with team filter).
+        *   `settings/` <!-- Added -->
+            *   `ui/`: Screens (`SettingsScreen` - Contains team/language settings).
         *   `schedule/`: Placeholder.
             *   `ui/`: Screens (`ScheduleScreen`).
-        *   `more/`: Placeholder.
-            *   `ui/`: Screens (`MoreScreen`).
+        *   `more/` <!-- Updated -->
+            *   `ui/`: Widgets (`MoreOptionsSheetContent.dart` - Content for the bottom sheet overlay).
     *   `models/`: (Alternative location for ALL models if preferred over feature folders).
 *   `supabase/`: Supabase backend configuration.
     *   `functions/`: Edge Functions (e.g., `articlePreviews`, `articleDetail`, `sendPushNotification`).
@@ -174,7 +179,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   **Dart:** Programming language for Flutter.
 *   **Supabase:** Backend-as-a-Service:
     *   **Database:** PostgreSQL for data storage (`NewsArticles`, `device_tokens`, `Teams`).
-    *   **Edge Functions:** Deno runtime for serverless backend logic (`articlePreviews`, `articleDetail`, `sendPushNotification`).
+    *   **Edge Functions:** Deno runtime for serverless backend logic (`articlePreviews` - now supports team filtering, `articleDetail`, `sendPushNotification`).
     *   **Database Webhooks:** Triggers the `sendPushNotification` function on new `NewsArticles` inserts.
     *   **Realtime:** Can be used for real-time UI updates (separate from push notifications).
     *   **Auth (Setup for):** Supabase Auth for user management (not fully implemented in UI yet).
@@ -183,7 +188,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
     *   **Firebase Core (`firebase_core`):** For initializing Firebase connection.
     *   **Firebase Cloud Messaging (FCM) (`firebase_messaging`):** For handling push notifications (permissions, token retrieval, message handling).
 *   **FlutterFire:** Flutter plugins for Firebase.
-*   **Riverpod (`flutter_riverpod`):** State management and dependency injection.
+*   **Riverpod (`flutter_riverpod`):** State management and dependency injection (using Providers, Notifiers, Family modifiers).
 *   **Supabase Flutter (`supabase_flutter`):** Official Supabase client library for Flutter.
 *   **Shared Preferences (`shared_preferences`):** Local key-value storage for persisting non-critical user preferences (selected team, language).
 *   **Cached Network Image (`cached_network_image`):** Efficiently loads and caches network images.
@@ -200,7 +205,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 *   Uses `ProviderScope` at the root (`main.dart`).
 *   Widgets use `ConsumerWidget` or `ConsumerStatefulWidget`.
-*   **Providers Used:** `Provider` (services), `StateProvider` (simple state), `FutureProvider.family` (async data with params), `StateNotifierProvider`/`AsyncNotifierProvider` (complex async state, preferences, data lists).
+*   **Providers Used:** `Provider` (services), `StateProvider` (simple state like filters), `FutureProvider.family` (async data with params), `StateNotifierProvider`/`AsyncNotifierProvider.family` (complex async state, preferences, paginated data lists with optional filtering). <!-- Updated -->
 
 ### Backend Integration (Supabase)
 
@@ -208,10 +213,12 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   Push notifications are triggered via a **backend-driven** flow (see [Push Notifications](#push-notifications-firebase--supabase) section).
 *   **Security (RLS):** Enabled on tables. Policies allow `anon` role actions needed by the app (e.g., insert/update `device_tokens`) and `service_role` key used by the Database Webhook trigger.
 
-### Navigation (State-Driven Inline Detail View)
+### Navigation (State-Driven Inline Detail View & Overlays) <!-- Updated Title -->
 
 *   `MainNavigationWrapper` handles adaptive layout (BottomNav/Drawer) and persistent `GlobalAppBar`.
 *   `currentDetailArticleIdProvider` controls whether the main screen stack or `ArticleDetailScreen` is shown in the body. Navigation happens by changing this provider's state.
+*   The "More" tab now triggers a modal bottom sheet overlay (`MoreOptionsSheetContent`) instead of navigating to a dedicated screen in the main stack. <!-- Added -->
+*   Other screens like "All News" and "Settings" are pushed onto the navigation stack using `Navigator.push`. <!-- Added -->
 
 ### Push Notifications (Firebase + Supabase)
 
@@ -246,11 +253,11 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 ### Data Fetching & Services
 
 *   Network calls encapsulated in Service classes (`NewsFeedService`, `ArticleDetailService`, `NotificationService`, `PreferenceService`).
-*   Riverpod providers manage service instances and data states (`paginatedArticlesProvider`, `articleDetailProvider`).
+*   Riverpod providers manage service instances and data states (`paginatedArticlesProvider.family` - supports filtering, `articleDetailProvider`). <!-- Updated -->
 
 ### Localization
 
-*   Basic setup (`flutter_localizations`, `intl`). EN/DE supported. `localeNotifierProvider` manages state, persisted via `shared_preferences`.
+*   Basic setup (`flutter_localizations`, `intl`). EN/DE supported. `localeNotifierProvider` manages state, persisted via `shared_preferences`. Language can be changed in Settings screen. <!-- Updated -->
 
 ### Local Persistence
 
@@ -258,7 +265,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 ### Responsiveness
 
-*   Layout adapts via `MainNavigationWrapper`. Content constrained via `kMaxContentWidth`.
+*   Layout adapts via `MainNavigationWrapper`. Content constrained via `kMaxContentWidth` on main screens and implemented on `AllNewsScreen`, `SettingsScreen`. <!-- Updated -->
 
 ### HTML Content Rendering
 
@@ -271,7 +278,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 ## Implemented Features
 
 *   **Core Setup:** Flutter project targeting iOS, Android, Web.
-*   **Supabase Integration:** Initialization, credential loading, Edge Function interaction (data fetch), DB table setup (`device_tokens`), Database Webhook trigger.
+*   **Supabase Integration:** Initialization, credential loading, Edge Function interaction (data fetch with filtering), DB table setup (`device_tokens`), Database Webhook trigger.
 *   **Firebase Integration:** Core SDK init, FCM setup (permissions, token handling), Web Service Worker.
 *   **Push Notifications:**
     *   User permission request (iOS, Android 13+).
@@ -282,12 +289,16 @@ The project follows a **Feature-First** architecture within the `lib` directory:
     *   Foreground message handling (console logs).
 *   **Global Theme:** Consistent app styling.
 *   **Adaptive Navigation (State-Driven):** Persistent `GlobalAppBar`, BottomNav/Drawer, Inline Article Detail view.
-*   **Language Selection:** Global language picker (EN/DE) with persistence (UI requires fix for mobile).
-*   **News Feed (`NewsFeedScreen`):** List display, Pagination, Pull-to-Refresh, Headline Story, Conditional Team Huddle.
-*   **Team Huddle Section:** Displays team info based on selection (placeholder data for games/injuries).
-*   **My Team (`MyTeamScreen`):** Team selection, local persistence (`shared_preferences`), updates notification subscription in database (`device_tokens` table). Displays team-specific articles (pagination pending).
-*   **Article Detail (`ArticleDetailScreen`):** Fetches/displays full article, HTML rendering, source link, refresh/share actions.
-*   **Placeholder Screens:** Schedule, More.
+*   **News Feed (`NewsFeedScreen`):** Displays general news, Pagination, Pull-to-Refresh, Conditional Team Huddle based on user preference. <!-- Updated Description -->
+*   **All News (`AllNewsScreen`):** Dedicated screen showing unfiltered news feed, Pagination, Pull-to-Refresh, Floating Action Button for team filtering. <!-- Added -->
+*   **More Options (`MoreOptionsSheetContent`):** Modal bottom sheet overlay triggered from navigation, providing access to All News, Teams (placeholder), Settings. <!-- Added -->
+*   **Settings (`SettingsScreen`):**
+    *   **Favorite Team:** Allows selection/change of favorite team using an interactive logo grid with confirmation. Updates preference and notification subscription. <!-- Added -->
+    *   **Language Selection:** Allows changing app language (EN/DE) with persistence. <!-- Added (Moved from Drawer) -->
+*   **Team Huddle Section:** Displays team info based on selection (placeholder data for games/injuries). Shown conditionally on `NewsFeedScreen`.
+*   **My Team (`MyTeamScreen`):** Team selection dropdown (redundant with Settings, consider refactor), displays team-specific articles (pagination pending). <!-- Updated Description -->
+*   **Article Detail (`ArticleDetailScreen`):** Fetches/displays full article, HTML rendering, source link, refresh/share actions. Triggered via state change.
+*   **Placeholder Screens:** Schedule.
 
 ## Running the App
 
@@ -304,7 +315,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 *   Relies on a **Supabase backend** with:
     *   Tables: `NewsArticles`, `Teams` (assumed), `device_tokens`.
-    *   Edge Functions: `articlePreviews`, `articleDetail`, `sendPushNotification`.
+    *   Edge Functions: `articlePreviews` (supports pagination, optional team filtering), `articleDetail`, `sendPushNotification`. <!-- Updated -->
     *   Database Webhook: `notifyOnNewArticle` triggering `sendPushNotification`.
     *   Secrets: `FIREBASE_PROJECT_ID`, `FCM_SERVICE_ACCOUNT_KEY_JSON`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` required by `sendPushNotification`. Service Role Key used by Webhook trigger's `Authorization` header.
 *   **RLS policies** control data access (ensure `device_tokens` allows needed actions by `anon` role, and Edge Function can read it).

@@ -105,7 +105,7 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                               isSelected
                                   ? Theme.of(
                                     context,
-                                  ).colorScheme.primary.withOpacity(0.1)
+                                  ).colorScheme.primary.withValues(alpha: 0.1)
                                   : Colors.transparent,
                           border:
                               isSelected
@@ -118,7 +118,9 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                               isSelected
                                   ? [
                                     BoxShadow(
-                                      color: Colors.black.withOpacity(0.10),
+                                      color: Colors.black.withValues(
+                                        alpha: 0.1,
+                                      ),
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),

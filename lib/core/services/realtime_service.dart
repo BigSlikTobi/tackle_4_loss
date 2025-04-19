@@ -121,7 +121,7 @@ class RealtimeService {
       // without requiring a manual refresh, but be careful about race conditions
       // with the main list fetching.
       // Example: ref.invalidate(paginatedArticlesProvider);
-      // --- End Optional TODO ---
+      // --- End Optional ---
     } else {
       debugPrint(
         "Flutter Realtime: Inserted article did not match current user's criteria.",

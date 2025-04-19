@@ -194,21 +194,17 @@ class MainNavigationWrapper extends ConsumerWidget {
                           if (teamId != null &&
                               teamLogoMap.containsKey(teamId)) {
                             debugPrint(
-                              'BottomNav: Showing team logo for My Team tab: teamId=' +
-                                  teamId,
+                              'BottomNav: Showing team logo for My Team tab: teamId=$teamId',
                             );
                             return BottomNavigationBarItem(
                               icon: Image.asset(
-                                'assets/team_logos/' +
-                                    teamLogoMap[teamId]! +
-                                    '.png',
+                                'assets/team_logos/${teamLogoMap[teamId]!}.png',
                                 width: 28,
                                 height: 28,
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
                                   debugPrint(
-                                    'BottomNav: Error loading team logo for teamId=' +
-                                        teamId,
+                                    'BottomNav: Error loading team logo for teamId=$teamId',
                                   );
                                   return Icon(item.icon);
                                 },
