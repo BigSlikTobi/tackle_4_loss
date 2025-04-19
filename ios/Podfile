@@ -25,7 +25,7 @@ def flutter_root
     matches = line.match(/FLUTTER_ROOT\=(.*)/)
     return matches[1].strip if matches
   end
-  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}"
+  raise "FLUTTER_ROOT not found in #{generated_xcode_build_settings_path}. Ensure the file exists and contains the FLUTTER_ROOT variable. You may need to run 'flutter pub get' to regenerate it."
 end
 
 require File.expand_path(
