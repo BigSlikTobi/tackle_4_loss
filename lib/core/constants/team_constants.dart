@@ -1,4 +1,6 @@
 final Map<String, String> teamLogoMap = {
+  'AFC': 'afc',
+  'NFC': 'nfc',
   'ARI': 'arizona_cardinals',
   'ATL': 'atlanta_falcons',
   'BAL': 'baltimore_ravens',
@@ -37,6 +39,8 @@ final Map<String, String> teamLogoMap = {
 
 // --- Map for Full Team Names ---
 final Map<String, String> teamFullNameMap = {
+  'AFC': 'American Football Conference',
+  'NFC': 'National Football Conference',
   'ARI': 'Arizona Cardinals',
   'ATL': 'Atlanta Falcons',
   'BAL': 'Baltimore Ravens',

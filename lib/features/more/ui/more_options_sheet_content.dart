@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart';
-// --- Import the Settings Screen ---
 import 'package:tackle_4_loss/features/settings/ui/settings_screen.dart';
+// --- Import the new Teams Screen ---
+import 'package:tackle_4_loss/features/teams/ui/teams_screen.dart';
 // import 'package:url_launcher/url_launcher.dart'; // Keep commented for now
 
 class MoreOptionsSheetContent extends ConsumerWidget {
@@ -83,15 +84,16 @@ class MoreOptionsSheetContent extends ConsumerWidget {
           ),
           _buildMoreListItem(
             context: context,
-            icon: Icons.group,
+            icon: Icons.group, // Using 'group' icon for Teams
             title: 'Teams',
             onTap: () {
-              debugPrint('Teams tapped');
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Navigate to Teams (Not Implemented)'),
-                ),
+              // --- MODIFIED: Navigate to TeamsScreen ---
+              debugPrint('Teams tapped - Navigating to TeamsScreen');
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TeamsScreen()),
               );
+              // --- END MODIFICATION ---
             },
           ),
           _buildMoreListItem(
