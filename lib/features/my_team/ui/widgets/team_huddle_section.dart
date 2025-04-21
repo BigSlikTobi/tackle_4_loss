@@ -1,11 +1,13 @@
-// lib/features/my_team/ui/widgets/team_huddle_section.dart
 import 'package:flutter/material.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/features/my_team/ui/widgets/upcoming_games_card.dart';
 import 'package:tackle_4_loss/features/my_team/ui/widgets/injury_report_card.dart';
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/headline_story_card.dart';
-import 'package:tackle_4_loss/core/constants/team_constants.dart'; // Import constants
-import 'package:tackle_4_loss/core/navigation/main_navigation_wrapper.dart';
+import 'package:tackle_4_loss/core/constants/team_constants.dart';
+// --- FIX: Add import for layout constants ---
+import 'package:tackle_4_loss/core/constants/layout_constants.dart';
+// --- Remove old import if it existed ---
+// import 'package:tackle_4_loss/core/navigation/main_navigation_wrapper.dart';
 
 class TeamHuddleSection extends StatelessWidget {
   final String teamId;
@@ -22,16 +24,12 @@ class TeamHuddleSection extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final screenWidth = MediaQuery.of(context).size.width;
+    // --- CORRECT: Now uses imported constant ---
     final bool isMobileLayout = screenWidth < kMobileLayoutBreakpoint;
 
-    // Get logo path using the helper function
     final logoPath = getTeamLogoPath(teamId);
-    // Get full name using the helper function (optional if not used in header)
-    // final teamFullName = getTeamFullName(teamId);
 
-    // Calculate darker background color
     final Color sectionBackgroundColor = Color.alphaBlend(
-      // Use Color.fromARGB instead of withOpacity
       Color.fromARGB((255 * 0.05).round(), 0, 0, 0),
       theme.canvasColor,
     );
@@ -41,7 +39,6 @@ class TeamHuddleSection extends StatelessWidget {
       child: Card(
         margin: EdgeInsets.zero,
         elevation: 4.0,
-        // Use Color.fromARGB instead of withOpacity
         shadowColor: Color.fromARGB((255 * 0.2).round(), 0, 0, 0),
         color: sectionBackgroundColor,
         shape: RoundedRectangleBorder(
@@ -51,20 +48,17 @@ class TeamHuddleSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Section Header (Logo + "Team Huddle") ---
             Padding(
               padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 12.0),
               child: Row(
                 children: [
-                  // --- CORRECT USAGE ---
                   Image.asset(
-                    logoPath, // Use the path directly from the helper function
+                    logoPath,
                     height: 32,
                     width: 32,
                     errorBuilder:
                         (ctx, err, st) => const SizedBox(width: 32, height: 32),
                   ),
-                  // --- END CORRECTION ---
                   const SizedBox(width: 12),
                   Text(
                     "Team Huddle",
@@ -77,16 +71,18 @@ class TeamHuddleSection extends StatelessWidget {
             ),
             const Divider(height: 1, indent: 16, endIndent: 16),
 
-            // --- Headline Story or No News Available UI ---
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child:
                   headlineArticle != null
                       ? HeadlineStoryCard(article: headlineArticle!)
-                      : _buildNoNewsAvailableCard(context, logoPath),
+                      : _buildNoNewsAvailableCard(
+                        context,
+                        logoPath,
+                        teamId,
+                      ), // Pass teamId here
             ),
 
-            // --- Expandable Games and Injury Cards ---
             Padding(
               padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
               child: _buildTeamInfoSubSection(context, isMobileLayout, teamId),
@@ -97,11 +93,15 @@ class TeamHuddleSection extends StatelessWidget {
     );
   }
 
-  Widget _buildNoNewsAvailableCard(BuildContext context, String logoPath) {
+  // --- Pass teamId to _buildNoNewsAvailableCard ---
+  Widget _buildNoNewsAvailableCard(
+    BuildContext context,
+    String logoPath,
+    String teamId,
+  ) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    // Adding logging to validate logo path
     debugPrint(
       'TeamHuddleSection: Attempting to load logo from path: $logoPath',
     );
@@ -123,7 +123,6 @@ class TeamHuddleSection extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Use a larger size for the logo and add better error handling
                 SizedBox(
                   height: 80,
                   width: 80,
@@ -131,10 +130,8 @@ class TeamHuddleSection extends StatelessWidget {
                     logoPath,
                     fit: BoxFit.contain,
                     errorBuilder: (ctx, err, st) {
-                      // Log error for debugging
                       debugPrint('TeamHuddleSection: Error loading logo: $err');
-
-                      // First fallback: Try using a direct reference to the team logo
+                      // Use teamId (passed as parameter) for fallback logic
                       final String directPath =
                           'assets/team_logos/${teamLogoMap[teamId.toUpperCase()]?.toLowerCase() ?? 'nfl'}.png';
                       if (directPath != logoPath) {
@@ -145,7 +142,6 @@ class TeamHuddleSection extends StatelessWidget {
                           directPath,
                           fit: BoxFit.contain,
                           errorBuilder: (ctx2, err2, st2) {
-                            // Second fallback: Display NFL logo as a last resort
                             debugPrint(
                               'TeamHuddleSection: Falling back to NFL logo',
                             );
@@ -153,7 +149,6 @@ class TeamHuddleSection extends StatelessWidget {
                               'assets/team_logos/nfl.png',
                               fit: BoxFit.contain,
                               errorBuilder: (ctx3, err3, st3) {
-                                // Final fallback: If all image attempts fail, show team abbreviation
                                 return Container(
                                   decoration: BoxDecoration(
                                     shape: BoxShape.circle,
@@ -177,13 +172,10 @@ class TeamHuddleSection extends StatelessWidget {
                           },
                         );
                       }
-
-                      // If paths are the same, go directly to NFL logo
                       return Image.asset(
                         'assets/team_logos/nfl.png',
                         fit: BoxFit.contain,
                         errorBuilder: (ctx3, err3, st3) {
-                          // Final fallback: If all image attempts fail, show team abbreviation
                           return Container(
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
@@ -211,7 +203,6 @@ class TeamHuddleSection extends StatelessWidget {
                 Text(
                   "currently no News available...",
                   style: textTheme.titleMedium?.copyWith(
-                    // Use Color.alphaBlend for text color opacity
                     color: Color.alphaBlend(
                       Color.fromARGB((255 * 0.7).round(), 0, 0, 0),
                       theme.colorScheme.onSurface,

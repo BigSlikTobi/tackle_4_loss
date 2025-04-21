@@ -12,7 +12,7 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
 7.  [Architecture & Key Concepts](#architecture--key-concepts)
     *   [State Management (Riverpod)](#state-management-riverpod)
     *   [Backend Integration (Supabase)](#backend-integration-supabase)
-    *   [Navigation (State-Driven Inline Detail View & Overlays)](#navigation-state-driven-inline-detail-view--overlays) <!-- Updated -->
+    *   [Navigation (State-Driven Detail & Pushed Routes)](#navigation-state-driven-detail--pushed-routes) 
     *   [Push Notifications (Firebase + Supabase)](#push-notifications-firebase--supabase)
     *   [Theming & Styling](#theming--styling)
     *   [Data Fetching & Services](#data-fetching--services)
@@ -28,7 +28,7 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
 
 ## Overview
 
-Tackle4Loss aims to provide users with up-to-date American Football news curated from different NFL Source News Sites like NFL.com or ESPN.com. Users can select their favorite team and receive push notifications for new, relevant articles.
+Tackle4Loss aims to provide users with up-to-date American Football news curated from different NFL Source News Sites like NFL.com or ESPN.com. Users can select their favorite team and receive push notifications for new, relevant articles. The app also allows users to browse team information, including rosters and injury reports.
 
 This Flutter application serves as the user interface, interacting with a Supabase backend for data storage, retrieval (via Edge Functions), and push notification triggering (via Database Webhooks and Edge Functions). The app is designed to be responsive, adapting its layout for mobile, tablet, and web screens, supports push notifications on iOS, Android, and Web, and provides user settings for customization.
 
@@ -47,7 +47,7 @@ This Flutter application serves as the user interface, interacting with a Supaba
 *   **Git:** For cloning the repository.
 *   **Firebase Project:** A Firebase project set up with Android, iOS, and Web apps registered.
 *   **APNs Configuration:** APNs Auth Key or Certificate uploaded to Firebase Project Settings -> Cloud Messaging for iOS push notifications.
-*   **(Backend) Supabase Account & Project:** Set up with necessary tables (`NewsArticles`, `Teams`, `device_tokens`).
+*   **(Backend) Supabase Account & Project:** Set up with necessary tables (`NewsArticles`, `Teams`, `DeviceToken`, `Rosters`, `Injuries`, `Player`). Ensure relationships and RLS policies are correctly configured. 
 
 ## Getting Started
 
@@ -82,10 +82,10 @@ This Flutter application serves as the user interface, interacting with a Supaba
         supabase secrets set SUPABASE_URL=<YOUR_SUPABASE_URL>
         supabase secrets set SUPABASE_ANON_KEY=<YOUR_SUPABASE_ANON_KEY>
         ```
-4.  **Deploy Supabase Edge Function:**
+4.  **Deploy Supabase Edge Functions:**
     *   Navigate to the `supabase/functions` directory if needed.
     *   Deploy the notification function: `supabase functions deploy sendPushNotification --no-verify-jwt`
-    *   Deploy the data functions: `supabase functions deploy articlePreviews`, `supabase functions deploy articleDetail` (or deploy all).
+    *   Deploy the data functions: `supabase functions deploy articlePreviews`, `supabase functions deploy articleDetail`, `supabase functions deploy teams`, `supabase functions deploy roster`, `supabase functions deploy injuries` (or deploy all using `supabase functions deploy`). 
 5.  **Configure Supabase Database Webhook:**
     *   Set up a Database Webhook in the Supabase Dashboard:
         *   **Name:** `notifyOnNewArticle` (or similar)
@@ -150,7 +150,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
             *   `data/`: Models (`ArticlePreview`), Services (`NewsFeedService`).
             *   `logic/`: Riverpod Providers (`news_feed_provider.dart` - Family Provider, `news_feed_state.dart`).
             *   `ui/`: Screens (`NewsFeedScreen`), Widgets (`ArticleListItem`, `HeadlineStoryCard`).
-        *   `my_team/`
+        *   `my_team/` 
             *   `data/`: (If models/services specific to this feature are added)
             *   `logic/`: Providers (`selectedTeamNotifierProvider`).
             *   `ui/`: Screens (`MyTeamScreen`), Widgets (`UpcomingGamesCard`, `InjuryReportCard`, `TeamHuddleSection`, `TeamSelectionDropdown`, `TeamArticleList`).
@@ -158,17 +158,21 @@ The project follows a **Feature-First** architecture within the `lib` directory:
             *   `data/`: Models (`ArticleDetail`), Services (`ArticleDetailService`).
             *   `logic/`: Riverpod Providers (`article_detail_provider.dart`).
             *   `ui/`: Screens (`ArticleDetailScreen`).
-        *   `all_news/` <!-- Added -->
+        *   `all_news/`
             *   `ui/`: Screens (`AllNewsScreen` - Displays unfiltered news with team filter).
-        *   `settings/` <!-- Added -->
+        *   `settings/`
             *   `ui/`: Screens (`SettingsScreen` - Contains team/language settings).
+        *   `teams/`
+            *   `data/`: Models (`TeamInfo`, `PlayerInfo`, `PlayerInjury`), Services (`TeamService`, `RosterService`, `InjuryService`).
+            *   `logic/`: Riverpod Providers (`teams_provider.dart`, `roster_provider.dart`, `injury_provider.dart`, `position_groups.dart`).
+            *   `ui/`: Screens (`TeamsScreen`, `TeamDetailScreen`), Widgets (`PlayerListItem`, `InjuryListItem`, `RosterTabContent`, `GameDayTabContent`, `TeamNewsTabContent`, `PlaceholderContent`).
         *   `schedule/`: Placeholder.
             *   `ui/`: Screens (`ScheduleScreen`).
-        *   `more/` <!-- Updated -->
+        *   `more/`
             *   `ui/`: Widgets (`MoreOptionsSheetContent.dart` - Content for the bottom sheet overlay).
     *   `models/`: (Alternative location for ALL models if preferred over feature folders).
 *   `supabase/`: Supabase backend configuration.
-    *   `functions/`: Edge Functions (e.g., `articlePreviews`, `articleDetail`, `sendPushNotification`).
+    *   `functions/`: Edge Functions (`articlePreviews`, `articleDetail`, `sendPushNotification`, `teams`, `roster`, `injuries`). 
         *   `_shared/`: Shared code for functions (e.g., `cors.ts`).
 *   `web/`: Web platform specific files.
     *   `firebase-messaging-sw.js`: **Required** Service worker for background web push notifications.
@@ -178,12 +182,12 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   **Flutter:** Cross-platform UI toolkit.
 *   **Dart:** Programming language for Flutter.
 *   **Supabase:** Backend-as-a-Service:
-    *   **Database:** PostgreSQL for data storage (`NewsArticles`, `device_tokens`, `Teams`).
-    *   **Edge Functions:** Deno runtime for serverless backend logic (`articlePreviews` - now supports team filtering, `articleDetail`, `sendPushNotification`).
+    *   **Database:** PostgreSQL for data storage (`NewsArticles`, `DeviceToken`, `Teams`, `Rosters`, `Injuries`, `Player`). 
+    *   **Edge Functions:** Deno runtime for serverless backend logic (`articlePreviews` - supports team filtering/pagination, `articleDetail`, `sendPushNotification`, `teams` - fetches all teams, `roster` - fetches all players for a team, `injuries` - fetches paginated injuries for a team).
     *   **Database Webhooks:** Triggers the `sendPushNotification` function on new `NewsArticles` inserts.
     *   **Realtime:** Can be used for real-time UI updates (separate from push notifications).
     *   **Auth (Setup for):** Supabase Auth for user management (not fully implemented in UI yet).
-    *   **Storage:** For storing images (potentially used by backend Python scripts).
+    *   **Storage:** For storing images (potentially used by backend Python scripts or Edge Functions like `injuries`). 
 *   **Firebase:** Platform services:
     *   **Firebase Core (`firebase_core`):** For initializing Firebase connection.
     *   **Firebase Cloud Messaging (FCM) (`firebase_messaging`):** For handling push notifications (permissions, token retrieval, message handling).
@@ -197,6 +201,7 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   **Flutter HTML (`flutter_html`):** Renders HTML content within Flutter widgets.
 *   **URL Launcher (`url_launcher`):** Launches URLs in the default browser.
 *   **Share Plus (`share_plus`):** Invokes the native platform sharing UI.
+*   **collection (`collection`):** Provides utilities like `groupBy`, used for roster sorting.  
 *   **jose (`jose` via esm.sh):** Used within the `sendPushNotification` Edge Function for JWT signing (FCM authentication).
 
 ## Architecture & Key Concepts
@@ -205,46 +210,24 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 *   Uses `ProviderScope` at the root (`main.dart`).
 *   Widgets use `ConsumerWidget` or `ConsumerStatefulWidget`.
-*   **Providers Used:** `Provider` (services), `StateProvider` (simple state like filters), `FutureProvider.family` (async data with params), `StateNotifierProvider`/`AsyncNotifierProvider.family` (complex async state, preferences, paginated data lists with optional filtering). <!-- Updated -->
+*   **Providers Used:** `Provider` (services), `StateProvider` (simple state like filters), `FutureProvider.family` (async data with params, e.g., `rosterProvider`, `allTeamsProvider`), `StateNotifierProvider`/`AsyncNotifierProvider.family` (complex async state, preferences, paginated data lists, e.g., `paginatedArticlesProvider`, `injuryProvider`).
 
 ### Backend Integration (Supabase)
 
-*   Flutter app interacts with Supabase for data (`articlePreviews`, `articleDetail` Edge Functions) and saving preferences/tokens (`device_tokens` table via `supabase_flutter` client).
+*   Flutter app interacts with Supabase for data (`articlePreviews`, `articleDetail`, `teams`, `roster`, `injuries` Edge Functions) and saving preferences/tokens (`DeviceToken` table via `supabase_flutter` client). 
 *   Push notifications are triggered via a **backend-driven** flow (see [Push Notifications](#push-notifications-firebase--supabase) section).
-*   **Security (RLS):** Enabled on tables. Policies allow `anon` role actions needed by the app (e.g., insert/update `device_tokens`) and `service_role` key used by the Database Webhook trigger.
+*   **Security (RLS):** Enabled on tables. Policies allow `anon` role actions needed by the app (e.g., insert/update `DeviceToken`, read `Teams`, `Rosters`, `Injuries`) and `service_role` key used by the Database Webhook trigger. 
 
-### Navigation (State-Driven Inline Detail View & Overlays) <!-- Updated Title -->
+### Navigation (State-Driven Detail & Pushed Routes) 
 
-*   `MainNavigationWrapper` handles adaptive layout (BottomNav/Drawer) and persistent `GlobalAppBar`.
-*   `currentDetailArticleIdProvider` controls whether the main screen stack or `ArticleDetailScreen` is shown in the body. Navigation happens by changing this provider's state.
-*   The "More" tab now triggers a modal bottom sheet overlay (`MoreOptionsSheetContent`) instead of navigating to a dedicated screen in the main stack. <!-- Added -->
-*   Other screens like "All News" and "Settings" are pushed onto the navigation stack using `Navigator.push`. <!-- Added -->
+*   `MainNavigationWrapper` handles adaptive layout (BottomNav/Drawer) and persistent `GlobalAppBar` for the main sections (News, My Team, Schedule). It defaults to showing the app logo in the `GlobalAppBar`.
+*   `currentDetailArticleIdProvider` controls whether the main screen stack or `ArticleDetailScreen` is shown inline in the body. Navigation to/from article detail happens by changing this provider's state.
+*   The "More" tab triggers a modal bottom sheet overlay (`MoreOptionsSheetContent`) providing access to other top-level screens.
+*   Screens like "All News", "Settings", "Teams", and "Team Detail" are pushed onto the navigation stack using `Navigator.push`. These screens manage their own `Scaffold` and use `GlobalAppBar` (either defaulting to the app logo or providing a specific title like `TeamDetailScreen`). 
 
 ### Push Notifications (Firebase + Supabase)
 
-*   **Goal:** Notify users about new, published articles for their selected favorite team, even when the app is backgrounded or terminated.
-*   **Technology:** Firebase Cloud Messaging (FCM) for cross-platform delivery.
-*   **Flutter App Responsibilities (`NotificationService`):**
-    *   Initializes Firebase (`firebase_core`).
-    *   Requests user permission for notifications (`firebase_messaging`).
-    *   Retrieves the unique FCM device registration token.
-    *   Upserts the token (and platform) into the Supabase `device_tokens` table.
-    *   Updates the `subscribed_team_id` in the `device_tokens` table when the user changes their favorite team (`SelectedTeamNotifier` triggers this).
-    *   Listens for and handles foreground messages (currently logs to console).
-    *   Registers a background message handler (`firebaseMessagingBackgroundHandler` in `main.dart`).
-*   **Web Specific (`web/firebase-messaging-sw.js`):** A service worker file is required to handle background messages when the web app isn't active. It initializes Firebase Messaging Compat SDK.
-*   **Backend Trigger Flow:**
-    1.  **Database Insert:** A new row is inserted into `NewsArticles`.
-    2.  **Supabase Webhook:** A Database Webhook configured on `NewsArticles` (for `INSERT` events) is triggered.
-    3.  **Edge Function Call:** The webhook calls the `sendPushNotification` Supabase Edge Function (using the Service Role Key for auth).
-    4.  **Edge Function (`sendPushNotification`):**
-        *   Receives the inserted article data (`record`).
-        *   Checks if `record.release == 'PUBLISHED'` and `record.team` is not null.
-        *   Queries the `device_tokens` table to find all tokens where `subscribed_team_id` matches `record.team`.
-        *   Authenticates with FCM using a Service Account Key (stored as a Supabase secret) by generating an OAuth2 token.
-        *   Sends a push notification payload (title, body, `articleId` data) to each relevant token via the FCM HTTP v1 API.
-    5.  **FCM Delivery:** FCM routes the message via APNS (iOS) or its own channel (Android/Web) to the targeted devices.
-    6.  **Notification Display:** The OS displays the system notification if the app is backgrounded/terminated. The foreground handler runs if the app is active.
+*   *(Flow remains the same as previous description)*
 
 ### Theming & Styling
 
@@ -252,20 +235,20 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 ### Data Fetching & Services
 
-*   Network calls encapsulated in Service classes (`NewsFeedService`, `ArticleDetailService`, `NotificationService`, `PreferenceService`).
-*   Riverpod providers manage service instances and data states (`paginatedArticlesProvider.family` - supports filtering, `articleDetailProvider`). <!-- Updated -->
+*   Network calls encapsulated in Service classes (`NewsFeedService`, `ArticleDetailService`, `NotificationService`, `PreferenceService`, `TeamService`, `RosterService`, `InjuryService`). 
+*   Riverpod providers manage service instances and data states (`paginatedArticlesProvider.family` - news with filtering/pagination, `articleDetailProvider`, `allTeamsProvider`, `groupedTeamsProvider`, `rosterProvider.family`, `offensePlayersProvider.family`, etc., `injuryProvider.family`). 
 
 ### Localization
 
-*   Basic setup (`flutter_localizations`, `intl`). EN/DE supported. `localeNotifierProvider` manages state, persisted via `shared_preferences`. Language can be changed in Settings screen. <!-- Updated -->
+*   Basic setup (`flutter_localizations`, `intl`). EN/DE supported. `localeNotifierProvider` manages state, persisted via `shared_preferences`. Language can be changed in Settings screen.
 
 ### Local Persistence
 
-*   `shared_preferences` used via `PreferenceService` for language override and selected team ID (abbreviation). The `device_tokens` table in Supabase is the source of truth for notification subscriptions.
+*   `shared_preferences` used via `PreferenceService` for language override and selected team ID (abbreviation). The `DeviceToken` table in Supabase is the source of truth for notification subscriptions.
 
 ### Responsiveness
 
-*   Layout adapts via `MainNavigationWrapper`. Content constrained via `kMaxContentWidth` on main screens and implemented on `AllNewsScreen`, `SettingsScreen`. <!-- Updated -->
+*   Layout adapts via `MainNavigationWrapper`. Content constrained via `kMaxContentWidth` on main screens and implemented on `AllNewsScreen`, `SettingsScreen`, `TeamsScreen`, `TeamDetailScreen`. Uses `layout_constants.dart`. 
 
 ### HTML Content Rendering
 
@@ -273,32 +256,41 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 
 ### Sharing
 
-*   `share_plus` triggers native OS sharing UI from the `ArticleDetailScreen` (via `GlobalAppBar` action).
+*   `share_plus` triggers native OS sharing UI from the `ArticleDetailScreen` (via `GlobalAppBar` action within `ArticleDetailScreen`'s Scaffold). 
 
 ## Implemented Features
 
 *   **Core Setup:** Flutter project targeting iOS, Android, Web.
-*   **Supabase Integration:** Initialization, credential loading, Edge Function interaction (data fetch with filtering), DB table setup (`device_tokens`), Database Webhook trigger.
+*   **Supabase Integration:** Initialization, credential loading, Edge Function interaction (data fetch with filtering/pagination, fetching all), DB table setup (`DeviceToken`), Database Webhook trigger. 
 *   **Firebase Integration:** Core SDK init, FCM setup (permissions, token handling), Web Service Worker.
 *   **Push Notifications:**
     *   User permission request (iOS, Android 13+).
-    *   FCM Token retrieval and storage in Supabase `device_tokens` table.
+    *   FCM Token retrieval and storage in Supabase `DeviceToken` table.
     *   Linking stored token to user's selected team via `subscribed_team_id`.
     *   Backend-triggered notifications via Supabase Webhook -> Edge Function -> FCM for new, published articles matching the subscribed team.
     *   Receipt and display of system notifications (background/terminated) on iOS, Android, Web.
     *   Foreground message handling (console logs).
-*   **Global Theme:** Consistent app styling.
-*   **Adaptive Navigation (State-Driven):** Persistent `GlobalAppBar`, BottomNav/Drawer, Inline Article Detail view.
-*   **News Feed (`NewsFeedScreen`):** Displays general news, Pagination, Pull-to-Refresh, Conditional Team Huddle based on user preference. <!-- Updated Description -->
-*   **All News (`AllNewsScreen`):** Dedicated screen showing unfiltered news feed, Pagination, Pull-to-Refresh, Floating Action Button for team filtering. <!-- Added -->
-*   **More Options (`MoreOptionsSheetContent`):** Modal bottom sheet overlay triggered from navigation, providing access to All News, Teams (placeholder), Settings. <!-- Added -->
+*   **Global Theme & AppBar:** Consistent app styling, consistent `GlobalAppBar` (defaults to app logo, handles back button). 
+*   **Adaptive Navigation (State-Driven):** Persistent `GlobalAppBar` for main sections, BottomNav/Drawer, Inline Article Detail view.
+*   **News Feed (`NewsFeedScreen`):** Displays general news, Pagination, Pull-to-Refresh, Conditional Team Huddle based on user preference.
+*   **All News (`AllNewsScreen`):** Dedicated screen showing unfiltered news feed, Pagination, Pull-to-Refresh, Floating Action Button for team filtering.
+*   **More Options (`MoreOptionsSheetContent`):** Modal bottom sheet overlay triggered from navigation, providing access to All News, Teams, Settings.
+*   **Teams (`TeamsScreen`):** Fetches and displays all NFL teams, grouped by Conference and Division. Navigates to Team Detail. Responsive width.
+*   **Team Detail (`TeamDetailScreen`):**
+    *   Displays team info within a tabbed interface (General, Roster, Game Day, News).
+    *   Persistent team logo badge overlay in the bottom-left corner.
+    *   Responsive width.
+    *   **Roster Tab:** Fetches all players for the team. Displays players in nested tabs (Offense, Defense, Special Teams), sorted by position group (QB, WR, RB, etc.) with separators. 
+    *   **Game Day Tab:** Structure with nested tabs (Last Games, Upcoming, Injuries). 
+    *   **Injury Report Tab (within Game Day):** Fetches and displays paginated injury list for the team with player name/image. Supports pull-to-refresh and infinite scroll.
+    *   **News Tab:** Fetches and displays team-specific news articles. Supports pull-to-refresh and infinite scroll. 
 *   **Settings (`SettingsScreen`):**
-    *   **Favorite Team:** Allows selection/change of favorite team using an interactive logo grid with confirmation. Updates preference and notification subscription. <!-- Added -->
-    *   **Language Selection:** Allows changing app language (EN/DE) with persistence. <!-- Added (Moved from Drawer) -->
+    *   **Favorite Team:** Allows selection/change of favorite team using an interactive logo grid with confirmation. Updates preference and notification subscription.
+    *   **Language Selection:** Allows changing app language (EN/DE) with persistence.
 *   **Team Huddle Section:** Displays team info based on selection (placeholder data for games/injuries). Shown conditionally on `NewsFeedScreen`.
-*   **My Team (`MyTeamScreen`):** Team selection dropdown (redundant with Settings, consider refactor), displays team-specific articles (pagination pending). <!-- Updated Description -->
+*   **My Team (`MyTeamScreen`):** Team selection dropdown (redundant with Settings, consider refactor), displays team-specific articles (pagination pending).
 *   **Article Detail (`ArticleDetailScreen`):** Fetches/displays full article, HTML rendering, source link, refresh/share actions. Triggered via state change.
-*   **Placeholder Screens:** Schedule.
+*   **Placeholder Screens:** Schedule, General/Last Games/Upcoming Game tabs in Team Detail. 
 
 ## Running the App
 
@@ -314,11 +306,11 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 ## Backend Notes
 
 *   Relies on a **Supabase backend** with:
-    *   Tables: `NewsArticles`, `Teams` (assumed), `device_tokens`.
-    *   Edge Functions: `articlePreviews` (supports pagination, optional team filtering), `articleDetail`, `sendPushNotification`. <!-- Updated -->
+    *   Tables: `NewsArticles`, `Teams`, `DeviceToken`, `Rosters`, `Injuries`, `Player`. 
+    *   Edge Functions: `articlePreviews` (supports pagination, optional team filtering), `articleDetail`, `sendPushNotification`, `teams` (fetches all), `roster` (fetches all for team), `injuries` (paginated). 
     *   Database Webhook: `notifyOnNewArticle` triggering `sendPushNotification`.
-    *   Secrets: `FIREBASE_PROJECT_ID`, `FCM_SERVICE_ACCOUNT_KEY_JSON`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` required by `sendPushNotification`. Service Role Key used by Webhook trigger's `Authorization` header.
-*   **RLS policies** control data access (ensure `device_tokens` allows needed actions by `anon` role, and Edge Function can read it).
+    *   Secrets: `FIREBASE_PROJECT_ID`, `FCM_SERVICE_ACCOUNT_KEY_JSON`, `SUPABASE_URL`, `SUPABASE_ANON_KEY` required by functions. Service Role Key used by Webhook trigger's `Authorization` header.
+*   **RLS policies** control data access (ensure `anon` role can read `Teams`, `Rosters`, `Injuries`, `Player` and insert/update `DeviceToken`). 
 *   Relies on **Firebase Cloud Messaging (FCM)** for push delivery infrastructure.
 *   Python scripts (run separately) handle backend data processing/scraping.
 

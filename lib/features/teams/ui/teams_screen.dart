@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:tackle_4_loss/core/constants/team_constants.dart'; // For getTeamLogoPath
+import 'package:tackle_4_loss/core/constants/team_constants.dart';
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
-import 'package:tackle_4_loss/features/teams/logic/teams_provider.dart'; // Import providers
-// --- Import the new layout constant ---
+import 'package:tackle_4_loss/features/teams/logic/teams_provider.dart';
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
+import 'package:tackle_4_loss/features/teams/ui/team_detail_screen.dart';
+import 'package:tackle_4_loss/features/teams/data/team_info.dart';
 
 class TeamsScreen extends ConsumerWidget {
   const TeamsScreen({super.key});
@@ -18,20 +19,18 @@ class TeamsScreen extends ConsumerWidget {
     final textTheme = theme.textTheme;
 
     return Scaffold(
-      appBar: const GlobalAppBar(title: Text('NFL Teams')),
+      // --- CORRECT: No title provided, should default to logo ---
+      appBar: const GlobalAppBar(),
       body: groupedTeamsAsync.when(
         data: (conferenceGroups) {
           if (conferenceGroups.isEmpty) {
-            // --- Apply Center/ConstrainedBox to empty state too ---
-            // --- FIX: Removed const from Center ---
             return Center(
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-                child: const Text("No teams found."), // Text can be const here
+                child: const Text("No teams found."),
               ),
             );
           }
-          // --- Wrap the CustomScrollView ---
           return Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
@@ -39,7 +38,7 @@ class TeamsScreen extends ConsumerWidget {
                 slivers: [
                   // Iterate through conferences (AFC, NFC)
                   for (final conferenceGroup in conferenceGroups) ...[
-                    // Conference Header - Now with Logo
+                    // Conference Header
                     SliverToBoxAdapter(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(
@@ -48,35 +47,12 @@ class TeamsScreen extends ConsumerWidget {
                           16.0,
                           8.0,
                         ),
-                        child: Row(
-                          children: [
-                            // Conference Logo
-                            Image.asset(
-                              getTeamLogoPath(conferenceGroup.conferenceName),
-                              height: 40,
-                              width: 40,
-                              errorBuilder: (ctx, err, st) {
-                                debugPrint(
-                                  "Error loading logo for ${conferenceGroup.conferenceName}: $err",
-                                );
-                                return const Icon(
-                                  Icons.sports_football,
-                                  size: 40,
-                                );
-                              },
-                            ),
-                            const SizedBox(width: 12),
-                            // Conference Name
-                            Expanded(
-                              child: Text(
-                                getTeamFullName(conferenceGroup.conferenceName),
-                                style: textTheme.headlineSmall?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: theme.colorScheme.primary,
-                                ),
-                              ),
-                            ),
-                          ],
+                        child: Text(
+                          conferenceGroup.conferenceName,
+                          style: textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                            color: theme.colorScheme.primary,
+                          ),
                         ),
                       ),
                     ),
@@ -100,12 +76,12 @@ class TeamsScreen extends ConsumerWidget {
                       // Team List for the division
                       SliverList(
                         delegate: SliverChildBuilderDelegate((context, index) {
-                          final team = divisionGroup.teams[index];
+                          final team =
+                              divisionGroup.teams[index]; // team is TeamInfo
                           final logoPath = getTeamLogoPath(team.teamId);
                           return Padding(
                             padding: const EdgeInsets.symmetric(
-                              horizontal:
-                                  8.0, // Padding within the constrained width
+                              horizontal: 8.0,
                               vertical: 2.0,
                             ),
                             child: Card(
@@ -127,17 +103,22 @@ class TeamsScreen extends ConsumerWidget {
                                   },
                                 ),
                                 title: Text(team.fullName),
+                                // --- Updated onTap ---
                                 onTap: () {
-                                  debugPrint("Tapped on ${team.fullName}");
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        'Team details for ${team.fullName} not implemented yet.',
-                                      ),
-                                      duration: const Duration(seconds: 2),
+                                  debugPrint(
+                                    "Navigating to details for ${team.fullName}",
+                                  );
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder:
+                                          (context) => TeamDetailScreen(
+                                            teamInfo: team,
+                                          ), // Pass the team object
                                     ),
                                   );
                                 },
+                                // --- End Updated onTap ---
                               ),
                             ),
                           );
@@ -151,15 +132,12 @@ class TeamsScreen extends ConsumerWidget {
               ),
             ),
           );
-          // --- End Wrapping ---
         },
-        // --- Apply Center/ConstrainedBox to loading/error states ---
-        // --- FIX: Removed const from Center ---
         loading:
             () => Center(
+              // Loading/Error states are fine within the new Scaffold body
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-                // LoadingIndicator itself is const, so this child can be const
                 child: const LoadingIndicator(),
               ),
             ),
@@ -168,9 +146,7 @@ class TeamsScreen extends ConsumerWidget {
               child: ConstrainedBox(
                 constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
                 child: Padding(
-                  // Add padding around error message
                   padding: const EdgeInsets.all(16.0),
-                  // ErrorMessageWidget is not const because of the callback
                   child: ErrorMessageWidget(
                     message: 'Failed to load teams: $error',
                     onRetry: () => ref.invalidate(allTeamsProvider),
@@ -178,7 +154,6 @@ class TeamsScreen extends ConsumerWidget {
                 ),
               ),
             ),
-        // --- End Wrapping ---
       ),
     );
   }
