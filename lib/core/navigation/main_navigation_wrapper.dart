@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:share_plus/share_plus.dart';
 import 'package:tackle_4_loss/core/navigation/app_navigation.dart';
 import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 // --- Use GlobalAppBar directly ---
@@ -9,9 +8,7 @@ import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 // --- REMOVE Preference Provider import if only used for team logo ---
 // import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
-import 'package:tackle_4_loss/features/article_detail/logic/article_detail_provider.dart';
 import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
-import 'package:tackle_4_loss/core/constants/team_constants.dart';
 import 'package:tackle_4_loss/features/more/ui/more_options_sheet_content.dart';
 // --- Import Layout Constants ---
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';

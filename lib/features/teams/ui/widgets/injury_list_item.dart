@@ -110,7 +110,7 @@ class InjuryListItem extends StatelessWidget {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.15),
+                          color: statusColor.withAlpha((0.15 * 255).toInt()),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: Text(

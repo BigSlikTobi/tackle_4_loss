@@ -70,8 +70,9 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
                 ref
                     .watch(paginatedArticlesProvider(widget.teamAbbreviation))
                     .isLoading;
-            if (isLoading)
+            if (isLoading) {
               return const LoadingIndicator(); // Show loading if actively fetching
+            }
 
             return LayoutBuilder(
               // Use LayoutBuilder to enable refresh even when empty
