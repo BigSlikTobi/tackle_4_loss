@@ -6,13 +6,12 @@ import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
-
-const double kMaxContentWidth = 1200.0;
+import 'package:tackle_4_loss/core/constants/layout_constants.dart';
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
-  // Helper: _buildTeamSelectionGrid remains the same
+  // --- Helper to build team selection grid ---
   Widget _buildTeamSelectionGrid(
     BuildContext context,
     WidgetRef ref,
@@ -21,15 +20,16 @@ class SettingsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final notifier = ref.read(selectedTeamNotifierProvider.notifier);
 
+    // Get team entries and sort them alphabetically by abbreviation (key)
     final sortedTeams =
         teamLogoMap.entries.toList()..sort((a, b) => a.key.compareTo(b.key));
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
       child: Wrap(
-        alignment: WrapAlignment.center,
-        spacing: 12.0,
-        runSpacing: 12.0,
+        alignment: WrapAlignment.center, // Center items within the Wrap
+        spacing: 12.0, // Horizontal space between logos
+        runSpacing: 12.0, // Vertical space between rows of logos
         children:
             sortedTeams.map((entry) {
               final teamId = entry.key;
@@ -37,44 +37,73 @@ class SettingsScreen extends ConsumerWidget {
 
               return InkWell(
                 onTap: () {
+                  // Prevent action if already selected
                   if (isCurrentlySelected) return;
-                  if (currentlySelectedTeamId == null) {
+
+                  // Show confirmation dialog only if changing FROM an existing selection
+                  if (currentlySelectedTeamId != null) {
+                    _showConfirmationDialog(context, ref, teamId);
+                  } else {
+                    // Directly select if no team was previously chosen
                     notifier.selectTeam(teamId);
                     debugPrint("Selected initial favorite team: $teamId");
-                  } else {
-                    _showConfirmationDialog(context, ref, teamId);
+                    // Provide user feedback
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          'Favorite team set to ${getTeamFullName(teamId)}',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
                   }
                 },
-                borderRadius: BorderRadius.circular(8.0),
+                borderRadius: BorderRadius.circular(8.0), // Match border radius
                 child: Container(
-                  padding: const EdgeInsets.all(6.0),
+                  padding: const EdgeInsets.all(
+                    6.0,
+                  ), // Padding inside the border
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(8.0),
                     border: Border.all(
                       color:
                           isCurrentlySelected
-                              ? theme.colorScheme.primary
-                              : Colors.grey.shade300,
-                      width: isCurrentlySelected ? 2.0 : 1.0,
+                              ? theme
+                                  .colorScheme
+                                  .primary // Highlight color
+                              : Colors.grey.shade300, // Default border
+                      width:
+                          isCurrentlySelected
+                              ? 2.0
+                              : 1.0, // Thicker border if selected
                     ),
+                    // Add a subtle shadow when selected for depth
                     boxShadow:
                         isCurrentlySelected
                             ? [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.1),
+                                color: Colors.black.withAlpha(
+                                  // Use withAlpha for opacity
+                                  (255 * 0.1).round(),
+                                ),
                                 blurRadius: 4,
-                                offset: const Offset(0, 1),
+                                offset: const Offset(
+                                  0,
+                                  1,
+                                ), // Slight vertical offset
                               ),
                             ]
-                            : [],
+                            : [], // No shadow if not selected
                   ),
+                  // Display team logo
                   child: Image.asset(
                     getTeamLogoPath(teamId),
-                    height: 24,
-                    width: 24,
+                    height: 30, // Slightly larger logo
+                    width: 30,
                     fit: BoxFit.contain,
+                    // Fallback for missing logo image
                     errorBuilder:
-                        (ctx, err, st) => const SizedBox(width: 24, height: 24),
+                        (ctx, err, st) => const SizedBox(width: 30, height: 30),
                   ),
                 ),
               );
@@ -83,11 +112,11 @@ class SettingsScreen extends ConsumerWidget {
     );
   }
 
-  // Helper: _showConfirmationDialog modified
+  // --- Helper to show confirmation dialog ---
   void _showConfirmationDialog(
     BuildContext context,
     WidgetRef ref,
-    String newTeamId,
+    String newTeamId, // The team the user tapped on
   ) {
     final notifier = ref.read(selectedTeamNotifierProvider.notifier);
     final theme = Theme.of(context);
@@ -97,52 +126,64 @@ class SettingsScreen extends ConsumerWidget {
       builder: (BuildContext dialogContext) {
         return AlertDialog(
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16.0),
+            borderRadius: BorderRadius.circular(16.0), // Softer corners
           ),
           title: const Text('Change Favorite Team?'),
-          // --- Modified Content ---
           content: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+            mainAxisAlignment:
+                MainAxisAlignment.center, // Center content horizontally
             mainAxisSize:
-                MainAxisSize.min, // Allow Row to shrink if content is short
+                MainAxisSize.min, // Prevent row from expanding unnecessarily
             children: [
               const Text('Switch to '),
               const SizedBox(width: 8),
+              // Show the logo of the team being switched TO
               Image.asset(
                 getTeamLogoPath(newTeamId),
                 height: 30,
                 width: 30,
-                errorBuilder: (ctx, err, st) => Text(newTeamId),
+                errorBuilder:
+                    (ctx, err, st) => Text(newTeamId), // Fallback text
               ),
               const SizedBox(width: 4),
-              // Wrap the potentially long text with Flexible
+              // Use Flexible to prevent overflow if team name is long
               Flexible(
                 child: Text(
                   '${getTeamFullName(newTeamId)}?',
-                  // softWrap: true, // Already true by default for Text
-                  textAlign: TextAlign.start, // Adjust alignment if needed
+                  textAlign: TextAlign.start, // Default alignment
                 ),
               ),
             ],
           ),
-          // --- End Modified Content ---
           actions: <Widget>[
+            // Cancel button
             TextButton(
               child: const Text('Cancel'),
               onPressed: () {
-                Navigator.pop(dialogContext);
+                Navigator.pop(dialogContext); // Close the dialog
               },
             ),
+            // Confirm button
             ElevatedButton(
               style: ElevatedButton.styleFrom(
-                backgroundColor: theme.colorScheme.primary,
-                foregroundColor: theme.colorScheme.onPrimary,
+                backgroundColor: theme.colorScheme.primary, // Use theme color
+                foregroundColor: theme.colorScheme.onPrimary, // Text color
               ),
               child: const Text('Confirm'),
               onPressed: () {
+                // Update the selected team using the notifier
                 notifier.selectTeam(newTeamId);
                 debugPrint("Changed favorite team to: $newTeamId");
-                Navigator.pop(dialogContext);
+                Navigator.pop(dialogContext); // Close the dialog
+                // Provide user feedback
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      'Favorite team changed to ${getTeamFullName(newTeamId)}',
+                    ),
+                    duration: const Duration(seconds: 2),
+                  ),
+                );
               },
             ),
           ],
@@ -160,14 +201,18 @@ class SettingsScreen extends ConsumerWidget {
     final teamState = ref.watch(selectedTeamNotifierProvider);
 
     return Scaffold(
-      appBar: const GlobalAppBar(title: Text('Settings')),
+      // --- FIX: Remove the title argument to default to app logo ---
+      appBar: const GlobalAppBar(),
+      // --- End Fix ---
       body: Center(
+        // Center and constrain the body content
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
           child: ListView(
+            // The main content list
             padding: const EdgeInsets.symmetric(vertical: 16.0),
             children: [
-              // --- Favorite Team Setting ---
+              // --- Favorite Team Setting Section ---
               Padding(
                 padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 0),
                 child: Text(
@@ -194,26 +239,29 @@ class SettingsScreen extends ConsumerWidget {
                       ),
                     ),
                 data: (selectedTeamId) {
+                  // --- Display based on whether a team is selected ---
                   if (selectedTeamId == null) {
-                    // State 2: No Team Selected
+                    // State: No Team Selected
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Padding(
                           padding: EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 4.0),
                           child: Text(
-                            'Select your favorite team here:',
+                            'Select your favorite team:', // Instruction text
                             style: TextStyle(fontSize: 16),
                           ),
                         ),
+                        // Show the grid for selection
                         _buildTeamSelectionGrid(context, ref, null),
                       ],
                     );
                   } else {
-                    // State 1: Team Selected
+                    // State: A Team IS Selected
                     return Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Display current selection
                         Padding(
                           padding: const EdgeInsets.fromLTRB(
                             16.0,
@@ -249,6 +297,7 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                         ),
                         const SizedBox(height: 20),
+                        // Option to change selection
                         Padding(
                           padding: const EdgeInsets.fromLTRB(
                             16.0,
@@ -257,10 +306,11 @@ class SettingsScreen extends ConsumerWidget {
                             4.0,
                           ),
                           child: Text(
-                            'Change your Team here:',
+                            'Change your Team:',
                             style: textTheme.titleMedium,
                           ),
                         ),
+                        // Show grid again, highlighting current selection
                         _buildTeamSelectionGrid(context, ref, selectedTeamId),
                       ],
                     );
@@ -268,10 +318,10 @@ class SettingsScreen extends ConsumerWidget {
                 },
               ),
 
-              // --- End Conditional Team Selection UI ---
+              // --- End Team Selection ---
               const Divider(height: 32.0, indent: 16.0, endIndent: 16.0),
 
-              // --- Language Setting ---
+              // --- Language Setting Section ---
               Padding(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 16.0,
@@ -285,20 +335,19 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
               ),
+              // Language Radio Buttons
               RadioListTile<Locale>(
                 title: const Text('English'),
                 value: const Locale('en'),
                 groupValue: currentLocale,
                 onChanged: (Locale? value) {
-                  if (value != null) {
-                    localeNotifier.setLocale(value);
-                  }
+                  if (value != null) localeNotifier.setLocale(value);
                 },
                 selected: currentLocale.languageCode == 'en',
                 activeColor: theme.colorScheme.primary,
-                selectedTileColor: theme.colorScheme.primary.withValues(
-                  alpha: 0.05,
-                ),
+                selectedTileColor: theme.colorScheme.primary.withAlpha(
+                  15,
+                ), // Subtle highlight
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
               ),
               RadioListTile<Locale>(
@@ -306,19 +355,20 @@ class SettingsScreen extends ConsumerWidget {
                 value: const Locale('de'),
                 groupValue: currentLocale,
                 onChanged: (Locale? value) {
-                  if (value != null) {
-                    localeNotifier.setLocale(value);
-                  }
+                  if (value != null) localeNotifier.setLocale(value);
                 },
                 selected: currentLocale.languageCode == 'de',
                 activeColor: theme.colorScheme.primary,
-                selectedTileColor: theme.colorScheme.primary.withValues(
-                  alpha: 0.05,
-                ),
+                selectedTileColor: theme.colorScheme.primary.withAlpha(
+                  15,
+                ), // Subtle highlight
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
               ),
 
+              // --- End Language Setting ---
               const Divider(height: 32.0, indent: 16.0, endIndent: 16.0),
+
+              // --- Add more settings below if needed ---
             ],
           ),
         ),

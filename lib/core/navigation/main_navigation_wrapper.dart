@@ -3,70 +3,33 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:tackle_4_loss/core/navigation/app_navigation.dart';
 import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
+// --- Use GlobalAppBar directly ---
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/core/providers/preference_provider.dart';
+// --- REMOVE Preference Provider import if only used for team logo ---
+// import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 import 'package:tackle_4_loss/features/article_detail/logic/article_detail_provider.dart';
 import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
-
-// --- Import the new sheet content widget ---
 import 'package:tackle_4_loss/features/more/ui/more_options_sheet_content.dart';
+// --- Import Layout Constants ---
+import 'package:tackle_4_loss/core/constants/layout_constants.dart';
 
-const double kMobileLayoutBreakpoint = 720.0;
-const double kMaxContentWidth = 1200.0;
-
-// TeamAwareGlobalAppBar remains the same...
-class TeamAwareGlobalAppBar extends ConsumerWidget
-    implements PreferredSizeWidget {
-  final bool automaticallyImplyLeading;
-  final Widget? leading;
-  final List<Widget>? actions;
-
-  const TeamAwareGlobalAppBar({
-    super.key,
-    this.automaticallyImplyLeading = true,
-    this.leading,
-    this.actions,
-  });
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final selectedTeamState = ref.watch(selectedTeamNotifierProvider);
-    final String? teamId = selectedTeamState.maybeWhen(
-      data: (id) => id,
-      orElse: () => null,
-    );
-
-    return GlobalAppBar(
-      automaticallyImplyLeading: automaticallyImplyLeading,
-      leading: leading,
-      actions: actions,
-      teamId: teamId,
-    );
-  }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-}
+// --- REMOVE TeamAwareGlobalAppBar ---
+// class TeamAwareGlobalAppBar extends ConsumerWidget ... { ... }
 
 class MainNavigationWrapper extends ConsumerWidget {
   const MainNavigationWrapper({super.key});
 
-  // --- Helper to show the bottom sheet ---
   void _showMoreOptions(BuildContext context) {
     showModalBottomSheet(
       context: context,
-      // Make it scrollable if content overflows
       isScrollControlled: true,
-      // Give it rounded corners matching the theme
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
       ),
-      // Use a builder to return the content widget
       builder: (BuildContext sheetContext) {
-        // Pass the context from the builder
         return const MoreOptionsSheetContent();
       },
     );
@@ -74,7 +37,10 @@ class MainNavigationWrapper extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    ref.read(realtimeServiceProvider);
+    // --- Initialize Realtime Service (ensure it runs) ---
+    // Reading the provider ensures its initialization logic runs if not already done.
+    ref.watch(realtimeServiceProvider);
+    // --- End Realtime Service Init ---
 
     final selectedIndex = ref.watch(selectedNavIndexProvider);
     final currentLocale = ref.watch(localeNotifierProvider);
@@ -85,8 +51,6 @@ class MainNavigationWrapper extends ConsumerWidget {
     final bool isMobileLayout = screenWidth < kMobileLayoutBreakpoint;
 
     final screens = appNavItems.map((item) => item.screen).toList();
-
-    // --- Find the index of the "More" item ---
     final moreItemIndex = appNavItems.indexWhere(
       (item) => item.label == 'More',
     );
@@ -96,6 +60,8 @@ class MainNavigationWrapper extends ConsumerWidget {
       children: screens,
     );
 
+    // If showing detail, the ArticleDetailScreen provides its own Scaffold/AppBar
+    // If showing main stack, MainNavigationWrapper provides the Scaffold/AppBar
     final Widget bodyContent =
         currentDetailId != null
             ? ArticleDetailScreen(articleId: currentDetailId)
@@ -103,211 +69,72 @@ class MainNavigationWrapper extends ConsumerWidget {
 
     // --- Build Mobile Layout ---
     if (isMobileLayout) {
-      return Scaffold(
-        appBar: TeamAwareGlobalAppBar(
-          // AppBar setup remains the same...
-          automaticallyImplyLeading: false,
-          leading: null,
-          actions: [
-            if (currentDetailId != null) ...[
-              // Share/Refresh actions remain...
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
-                onPressed:
-                    () =>
-                        ref.invalidate(articleDetailProvider(currentDetailId)),
-              ),
-              IconButton(
-                icon: const Icon(Icons.share_outlined),
-                tooltip: 'Share Article',
-                onPressed: () async {
-                  final articleAsyncValue = ref.read(
-                    articleDetailProvider(currentDetailId),
-                  );
-                  final article = articleAsyncValue.valueOrNull;
+      // Only build Scaffold/AppBar if NOT showing detail view
+      if (currentDetailId != null) {
+        return bodyContent; // ArticleDetailScreen has its own Scaffold
+      }
 
-                  if (article != null) {
-                    final headline = article.getLocalizedHeadline(
-                      currentLocale.languageCode,
-                    );
-                    final url = article.sourceUrl;
-                    final shareText =
-                        url != null ? '$headline\n\n$url' : headline;
-                    try {
-                      await Share.share(shareText);
-                    } catch (e) {
-                      debugPrint("Error sharing: $e");
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Could not start sharing.'),
-                          ),
-                        );
-                      }
-                    }
-                  } else {
-                    debugPrint("Share pressed but article data not available.");
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Article not loaded yet.'),
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-            ],
-          ],
+      // --- Scaffold for Mobile Main View ---
+      return Scaffold(
+        // --- Use GlobalAppBar directly ---
+        appBar: GlobalAppBar(
+          // No title needed here, defaults to app logo
+          automaticallyImplyLeading: false, // No back button on main screens
+          leading: null, // No menu button on mobile
+          actions: const [], // No actions needed on main mobile bar
         ),
-        bottomNavigationBar:
-            currentDetailId ==
-                    null // Only show nav bar if not in detail view
-                ? BottomNavigationBar(
-                  currentIndex: selectedIndex,
-                  onTap: (index) {
-                    // --- If "More" is tapped, show sheet, otherwise navigate ---
-                    if (index == moreItemIndex) {
-                      _showMoreOptions(context);
-                    } else {
-                      ref.read(currentDetailArticleIdProvider.notifier).state =
-                          null;
-                      ref.read(selectedNavIndexProvider.notifier).state = index;
-                    }
-                    // --- End modification ---
-                  },
-                  showSelectedLabels: false,
-                  showUnselectedLabels: false,
-                  items:
-                      appNavItems.asMap().entries.map((entry) {
-                        final item = entry.value;
-                        // My Team Logo logic remains the same...
-                        if (item.label == 'My Team') {
-                          final selectedTeamState = ref.watch(
-                            selectedTeamNotifierProvider,
-                          );
-                          final String? teamId = selectedTeamState.maybeWhen(
-                            data: (id) => id,
-                            orElse: () => null,
-                          );
-                          if (teamId != null &&
-                              teamLogoMap.containsKey(teamId)) {
-                            debugPrint(
-                              'BottomNav: Showing team logo for My Team tab: teamId=$teamId',
-                            );
-                            return BottomNavigationBarItem(
-                              icon: Image.asset(
-                                'assets/team_logos/${teamLogoMap[teamId]!}.png',
-                                width: 28,
-                                height: 28,
-                                fit: BoxFit.contain,
-                                errorBuilder: (context, error, stackTrace) {
-                                  debugPrint(
-                                    'BottomNav: Error loading team logo for teamId=$teamId',
-                                  );
-                                  return Icon(item.icon);
-                                },
-                              ),
-                              label: '',
-                            );
-                          } else {
-                            debugPrint(
-                              'BottomNav: No team selected, using default icon for My Team tab',
-                            );
-                            return BottomNavigationBarItem(
-                              icon: Icon(item.icon),
-                              label: '',
-                            );
-                          }
-                        } else {
-                          return BottomNavigationBarItem(
-                            icon: Icon(item.icon),
-                            label: '',
-                          );
-                        }
-                      }).toList(),
-                  type: BottomNavigationBarType.fixed,
-                  selectedItemColor: Theme.of(context).colorScheme.primary,
-                  unselectedItemColor: Colors.grey[600],
-                )
-                : null,
-        body: bodyContent,
+        bottomNavigationBar: BottomNavigationBar(
+          currentIndex: selectedIndex,
+          onTap: (index) {
+            if (index == moreItemIndex) {
+              _showMoreOptions(context);
+            } else {
+              ref.read(currentDetailArticleIdProvider.notifier).state = null;
+              ref.read(selectedNavIndexProvider.notifier).state = index;
+            }
+          },
+          showSelectedLabels: false,
+          showUnselectedLabels: false,
+          items:
+              appNavItems.map((item) {
+                // --- REMOVE team logo logic from BottomNav ---
+                // if (item.label == 'My Team') { ... }
+                // --- Always show icon ---
+                return BottomNavigationBarItem(
+                  icon: Icon(item.icon),
+                  label: '', // Keep labels empty
+                );
+              }).toList(),
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: Theme.of(context).colorScheme.primary,
+          unselectedItemColor: Colors.grey[600],
+        ),
+        body: bodyContent, // This is the IndexedStack
       );
     }
     // --- Build Desktop/Tablet Layout ---
     else {
+      // Only build Scaffold/AppBar if NOT showing detail view
+      if (currentDetailId != null) {
+        return bodyContent; // ArticleDetailScreen has its own Scaffold
+      }
+
+      // --- Scaffold for Desktop/Tablet Main View ---
       final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
 
       return Scaffold(
         key: scaffoldKey,
-        appBar: TeamAwareGlobalAppBar(
-          // AppBar setup remains the same...
-          automaticallyImplyLeading: false,
+        // --- Use GlobalAppBar directly ---
+        appBar: GlobalAppBar(
+          // No title needed here, defaults to app logo
+          automaticallyImplyLeading: false, // We provide custom leading
           leading: IconButton(
+            // Menu button to open drawer
             icon: const Icon(Icons.menu),
             tooltip: 'Open Menu',
             onPressed: () => scaffoldKey.currentState?.openDrawer(),
           ),
-          actions: [
-            if (currentDetailId != null) ...[
-              // Share/Refresh actions remain...
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
-                onPressed:
-                    () =>
-                        ref.invalidate(articleDetailProvider(currentDetailId)),
-              ),
-              IconButton(
-                icon: const Icon(Icons.share_outlined),
-                tooltip: 'Share Article',
-                onPressed: () async {
-                  final articleAsyncValue = ref.read(
-                    articleDetailProvider(currentDetailId),
-                  );
-                  final article = articleAsyncValue.valueOrNull;
-
-                  if (article != null) {
-                    final headline = article.getLocalizedHeadline(
-                      currentLocale.languageCode,
-                    );
-                    final url = article.sourceUrl;
-                    final shareText =
-                        url != null ? '$headline\n\n$url' : headline;
-                    try {
-                      final box = context.findRenderObject() as RenderBox?;
-                      await Share.share(
-                        shareText,
-                        sharePositionOrigin:
-                            box != null
-                                ? box.localToGlobal(Offset.zero) & box.size
-                                : null,
-                      );
-                    } catch (e) {
-                      debugPrint("Error sharing: $e");
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Could not start sharing.'),
-                          ),
-                        );
-                      }
-                    }
-                  } else {
-                    debugPrint("Share pressed but article data not available.");
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Article not loaded yet.'),
-                        ),
-                      );
-                    }
-                  }
-                },
-              ),
-            ],
-          ],
+          actions: const [], // No actions needed on main desktop bar
         ),
         drawer: Drawer(
           child: ListView(
@@ -327,26 +154,20 @@ class MainNavigationWrapper extends ConsumerWidget {
                 ListTile(
                   leading: Icon(appNavItems[i].icon),
                   title: Text(appNavItems[i].label),
-                  selected: i == selectedIndex && currentDetailId == null,
+                  selected: i == selectedIndex, // Selection based on index only
                   selectedColor: Theme.of(context).colorScheme.primary,
                   selectedTileColor: Theme.of(
                     context,
                   ).colorScheme.primary.withAlpha(26),
                   onTap: () {
-                    // --- Close drawer FIRST ---
-                    Navigator.pop(context);
-                    // --- If "More" is tapped, show sheet, otherwise navigate ---
+                    Navigator.pop(context); // Close drawer FIRST
                     if (i == moreItemIndex) {
-                      // Use a slight delay if needed, otherwise call directly
-                      // Future.delayed(Duration(milliseconds: 100), () {
                       _showMoreOptions(context);
-                      // });
                     } else {
                       ref.read(currentDetailArticleIdProvider.notifier).state =
                           null;
                       ref.read(selectedNavIndexProvider.notifier).state = i;
                     }
-                    // --- End modification ---
                   },
                 ),
               const Divider(indent: 16, endIndent: 16),
@@ -362,11 +183,9 @@ class MainNavigationWrapper extends ConsumerWidget {
                 value: const Locale('en'),
                 groupValue: currentLocale,
                 onChanged: (Locale? value) {
-                  if (value != null && currentLocale != value) {
+                  if (value != null) {
                     Navigator.pop(context); // Pop drawer first
                     localeNotifier.setLocale(value);
-                  } else if (value != null) {
-                    Navigator.pop(context); // Pop drawer even if no change
                   }
                 },
                 selected: currentLocale.languageCode == 'en',
@@ -377,11 +196,9 @@ class MainNavigationWrapper extends ConsumerWidget {
                 value: const Locale('de'),
                 groupValue: currentLocale,
                 onChanged: (Locale? value) {
-                  if (value != null && currentLocale != value) {
+                  if (value != null) {
                     Navigator.pop(context); // Pop drawer first
                     localeNotifier.setLocale(value);
-                  } else if (value != null) {
-                    Navigator.pop(context); // Pop drawer even if no change
                   }
                 },
                 selected: currentLocale.languageCode == 'de',
@@ -390,10 +207,11 @@ class MainNavigationWrapper extends ConsumerWidget {
             ],
           ),
         ),
+        // --- Apply layout constraints to body ---
         body: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-            child: bodyContent,
+            child: bodyContent, // This is the IndexedStack
           ),
         ),
       );
