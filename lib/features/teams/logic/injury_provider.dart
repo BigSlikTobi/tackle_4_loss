@@ -75,7 +75,7 @@ class InjuryNotifier extends FamilyAsyncNotifier<InjuryState, String> {
         nextCursor: response.nextCursor,
         hasMore: response.hasMore,
       );
-    } catch (e, s) {
+    } catch (e) {
       debugPrint(
         "[InjuryNotifier Team $teamAbbreviation] Error fetching injuries ${cursor != null ? 'after ID $cursor' : 'initial'}: $e",
       );
@@ -124,7 +124,7 @@ class InjuryNotifier extends FamilyAsyncNotifier<InjuryState, String> {
               response.nextCursor == null, // Clear if response cursor is null
         ),
       );
-    } catch (e, s) {
+    } catch (e) {
       debugPrint(
         "[InjuryNotifier Team $teamAbbreviation] Error fetching next page after cursor $currentCursor: $e",
       );

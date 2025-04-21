@@ -67,7 +67,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen>
                 labelColor: theme.appBarTheme.foregroundColor ?? Colors.white,
                 unselectedLabelColor: (theme.appBarTheme.foregroundColor ??
                         Colors.white)
-                    .withOpacity(0.7),
+                    .withAlpha((0.7 * 255).toInt()),
                 indicatorColor:
                     theme.appBarTheme.foregroundColor ?? Colors.white,
               ),
@@ -117,7 +117,7 @@ class _TeamDetailScreenState extends State<TeamDetailScreen>
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.25),
+            color: Colors.black.withAlpha((0.25 * 255).toInt()),
             blurRadius: 6.0,
             spreadRadius: 1.0,
             offset: const Offset(0, 2),

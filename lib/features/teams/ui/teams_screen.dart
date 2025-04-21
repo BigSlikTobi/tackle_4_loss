@@ -7,7 +7,6 @@ import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/features/teams/logic/teams_provider.dart';
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
 import 'package:tackle_4_loss/features/teams/ui/team_detail_screen.dart';
-import 'package:tackle_4_loss/features/teams/data/team_info.dart';
 
 class TeamsScreen extends ConsumerWidget {
   const TeamsScreen({super.key});

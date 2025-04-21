@@ -85,7 +85,7 @@ class PlayerGroupList extends ConsumerWidget {
                 child: Divider(
                   height: 1,
                   thickness: 1,
-                  color: theme.dividerColor.withOpacity(0.5),
+                  color: theme.dividerColor.withAlpha((0.5 * 255).toInt()),
                 ),
               );
             }
