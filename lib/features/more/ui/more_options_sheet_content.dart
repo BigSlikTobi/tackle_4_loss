@@ -15,19 +15,36 @@ class MoreOptionsSheetContent extends ConsumerWidget {
   // --- Helper function to build consistent list items ---
   Widget _buildMoreListItem({
     required BuildContext context,
-    required IconData icon,
+    IconData? icon, // Now optional
+    String? assetIconPath, // New: asset path for custom icon
     required String title,
     required VoidCallback onTap, // Action to perform AFTER dismissing the sheet
     Color? iconColor,
   }) {
     final theme = Theme.of(context);
+    Widget leadingWidget;
+    if (assetIconPath != null) {
+      leadingWidget = Image.asset(
+        assetIconPath,
+        height: 28,
+        width: 28,
+        fit: BoxFit.contain,
+        errorBuilder:
+            (context, error, stackTrace) =>
+                icon != null
+                    ? Icon(icon, color: iconColor ?? theme.colorScheme.primary)
+                    : const Icon(Icons.help_outline),
+      );
+    } else {
+      leadingWidget = Icon(icon, color: iconColor ?? theme.colorScheme.primary);
+    }
     return ListTile(
       // Use ListTile directly, Card is less common inside bottom sheets unless needed
       contentPadding: const EdgeInsets.symmetric(
         horizontal: 24.0,
         vertical: 8.0,
       ),
-      leading: Icon(icon, color: iconColor ?? theme.colorScheme.primary),
+      leading: leadingWidget,
       title: Text(title, style: theme.textTheme.titleMedium),
       trailing: Icon(Icons.chevron_right, color: Colors.grey[400]),
       onTap: () {
@@ -71,7 +88,8 @@ class MoreOptionsSheetContent extends ConsumerWidget {
         children: [
           _buildMoreListItem(
             context: context,
-            icon: Icons.newspaper,
+            assetIconPath: 'assets/navigation/news.png',
+            icon: Icons.newspaper, // fallback
             title: 'All News',
             onTap: () {
               debugPrint('All News tapped - Navigating to AllNewsScreen');
@@ -84,7 +102,8 @@ class MoreOptionsSheetContent extends ConsumerWidget {
           ),
           _buildMoreListItem(
             context: context,
-            icon: Icons.group, // Using 'group' icon for Teams
+            assetIconPath: 'assets/navigation/teams.png',
+            icon: Icons.group, // fallback
             title: 'Teams',
             onTap: () {
               // --- MODIFIED: Navigate to TeamsScreen ---
@@ -98,7 +117,8 @@ class MoreOptionsSheetContent extends ConsumerWidget {
           ),
           _buildMoreListItem(
             context: context,
-            icon: Icons.settings_outlined,
+            assetIconPath: 'assets/navigation/setting.png',
+            icon: Icons.settings_outlined, // fallback
             title: 'Settings',
             onTap: () {
               debugPrint('Settings tapped - Navigating to SettingsScreen');

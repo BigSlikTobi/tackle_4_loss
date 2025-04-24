@@ -5,7 +5,11 @@ import 'package:tackle_4_loss/core/providers/preference_provider.dart'; // Impor
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/features/my_team/ui/widgets/team_selection_dropdown.dart';
-import 'package:tackle_4_loss/features/my_team/ui/widgets/team_article_list.dart';
+import 'package:tackle_4_loss/features/teams/ui/widgets/team_news_tab_content.dart';
+import 'package:tackle_4_loss/features/teams/ui/widgets/game_day_tab_content.dart';
+import 'package:tackle_4_loss/features/teams/ui/widgets/roster_tab_content.dart';
+import 'package:tackle_4_loss/features/teams/ui/widgets/placeholder_content.dart';
+import 'package:tackle_4_loss/features/my_team/ui/widgets/team_huddle_section.dart';
 
 class MyTeamScreen extends ConsumerWidget {
   const MyTeamScreen({super.key});
@@ -53,10 +57,82 @@ class MyTeamScreen extends ConsumerWidget {
               ),
             ],
           );
-        }
-        // If a team IS selected, show the list of articles for that team
-        else {
-          return TeamArticleList(teamId: selectedTeamId);
+        } else {
+          // --- TeamHuddleSection on top, then tabbed layout below, all scrollable ---
+          return SafeArea(
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  TeamHuddleSection(
+                    teamId: selectedTeamId,
+                    headlineArticle:
+                        null, // Optionally fetch headline if needed
+                  ),
+                  // Tabbed content below
+                  DefaultTabController(
+                    length: 4,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Transparent TabBar, no shadow
+                        Container(
+                          color:
+                              Colors
+                                  .transparent, // fully transparent, no shadow
+                          child: TabBar(
+                            tabs: const [
+                              Tab(text: 'News'),
+                              Tab(text: 'General'),
+                              Tab(text: 'GameDay'),
+                              Tab(text: 'Roster'),
+                            ],
+                            isScrollable: true,
+                            labelStyle: const TextStyle(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            unselectedLabelStyle: const TextStyle(
+                              fontWeight: FontWeight.normal,
+                            ),
+                            labelColor: Theme.of(context).colorScheme.primary,
+                            unselectedLabelColor: Theme.of(
+                              context,
+                            ).colorScheme.onSurface.withOpacity(0.6),
+                            indicatorColor:
+                                Theme.of(context).colorScheme.primary,
+                            indicatorWeight: 2.5,
+                            overlayColor: WidgetStateProperty.all(
+                              Colors.transparent,
+                            ),
+                          ),
+                        ),
+                        // Give TabBarView a fixed height to avoid unbounded height error
+                        SizedBox(
+                          height:
+                              MediaQuery.of(context).size.height *
+                              0.7, // Adjust as needed
+                          child: TabBarView(
+                            children: [
+                              TeamNewsTabContent(
+                                teamAbbreviation: selectedTeamId,
+                              ),
+                              const PlaceholderContent(title: 'General Info'),
+                              GameDayTabContent(
+                                teamAbbreviation: selectedTeamId,
+                              ),
+                              RosterTabContent(
+                                teamAbbreviation: selectedTeamId,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
         }
       },
     );

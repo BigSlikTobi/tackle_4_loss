@@ -201,7 +201,7 @@ class TeamHuddleSection extends StatelessWidget {
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  "currently no News available...",
+                  "currently no Breaking News",
                   style: textTheme.titleMedium?.copyWith(
                     color: Color.alphaBlend(
                       Color.fromARGB((255 * 0.7).round(), 0, 0, 0),

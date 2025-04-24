@@ -74,20 +74,31 @@ class _InjuryTabContentState extends ConsumerState<InjuryTabContent> {
             );
           }
 
+          // Sort injuries by date descending (newest first)
+          final List sortedInjuries = List.from(injuries)..sort((a, b) {
+            final dateA = a.date ?? a.createdAt;
+            final dateB = b.date ?? b.createdAt;
+            return dateB.compareTo(dateA); // DESC: Newest first
+          });
+          debugPrint(
+            '[InjuryTabContent] Sorted injuries order (DESC): ${sortedInjuries.map((e) => (e.date ?? e.createdAt).toIso8601String()).join(', ')}',
+          );
+
           return ListView.builder(
             controller: _scrollController,
             physics: const AlwaysScrollableScrollPhysics(),
             itemCount:
-                injuries.length + (injuryState.isLoadingNextPage ? 1 : 0),
+                sortedInjuries.length + (injuryState.isLoadingNextPage ? 1 : 0),
             itemBuilder: (context, index) {
-              if (index == injuries.length && injuryState.isLoadingNextPage) {
+              if (index == sortedInjuries.length &&
+                  injuryState.isLoadingNextPage) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.0),
                   child: LoadingIndicator(),
                 );
               }
-              if (index < injuries.length) {
-                return InjuryListItem(injury: injuries[index]);
+              if (index < sortedInjuries.length) {
+                return InjuryListItem(injury: sortedInjuries[index]);
               }
               return Container();
             },

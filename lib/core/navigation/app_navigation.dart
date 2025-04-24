@@ -9,18 +9,25 @@ import 'package:tackle_4_loss/features/schedule/ui/schedule_screen.dart';
 
 // Keep the list final, but remove const from the NavItem instances inside
 final List<NavItem> appNavItems = [
-  NavItem(label: 'News', icon: Icons.newspaper, screen: NewsFeedScreen()),
-  NavItem(label: 'My Team', icon: Icons.people, screen: MyTeamScreen()),
+  NavItem(
+    label: 'News',
+    assetIconPath: 'assets/navigation/home.png',
+    screen: NewsFeedScreen(),
+  ),
+  NavItem(
+    label: 'My Team',
+    icon: Icons.people,
+    screen: MyTeamScreen(),
+    teamId: null, // This will be dynamically set based on user preference
+  ),
   NavItem(
     label: 'Schedule',
-    icon: Icons.calendar_month,
+    assetIconPath: 'assets/navigation/standings.png',
     screen: ScheduleScreen(),
   ),
-  // --- Use a placeholder screen for "More" as it's handled by onTap ---
   NavItem(
     label: 'More',
-    icon: Icons.more_horiz,
+    assetIconPath: 'assets/navigation/more.png',
     screen: const SizedBox.shrink(),
   ),
-  // --- End Change ---
 ];

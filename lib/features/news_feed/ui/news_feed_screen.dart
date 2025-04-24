@@ -6,7 +6,6 @@ import 'package:tackle_4_loss/features/news_feed/ui/widgets/headline_story_card.
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/article_list_item.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
-import 'package:tackle_4_loss/features/my_team/ui/widgets/team_huddle_section.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 
@@ -68,7 +67,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
     final articlesAsyncValue = ref.watch(paginatedArticlesProvider(null));
     // --- End Fix ---
 
-    // Watch other providers needed for headline/huddle logic
+    // Watch other providers needed for headline logic
     final displayMode = ref.watch(newsFeedDisplayModeProvider);
     final selectedTeamAsyncValue = ref.watch(selectedTeamNotifierProvider);
 
@@ -84,34 +83,17 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
           data: (allFetchedArticles) {
             // This is the FULL list now
 
-            // --- Re-implement Headline Logic for Main Feed ---
-            // Needs to consider selected team preference for the huddle section headline
-            final selectedTeamId = selectedTeamAsyncValue.valueOrNull;
-            ArticlePreview?
-            headlineArticleForHuddle; // Headline specifically for the huddle
-            ArticlePreview?
-            generalHeadline; // Headline for the top card if no team/huddle
+            // --- Headline Logic for Main Feed ---
+            ArticlePreview? generalHeadline;
 
             if (allFetchedArticles.isNotEmpty) {
-              if (selectedTeamId != null) {
-                // Try find latest article matching the selected team
-                headlineArticleForHuddle =
-                    allFetchedArticles
-                        .where((a) => a.teamId == selectedTeamId)
-                        // .sortedBy(...) // Add sorting by date if needed
-                        .firstOrNull;
-              }
-              // If no specific team headline, or no team selected, use the latest overall
+              // Use the latest overall article as headline
               generalHeadline = allFetchedArticles.first;
             }
             // --- End Headline Logic ---
 
-            final bool showTeamHuddle = selectedTeamId != null;
-
-            // Determine which headline article is *the* main one to exclude from the list
-            // If showing huddle, use its headline; otherwise, use general headline
-            final ArticlePreview? primaryHeadlineToExclude =
-                showTeamHuddle ? headlineArticleForHuddle : generalHeadline;
+            // The main headline to exclude from the list
+            final ArticlePreview? primaryHeadlineToExclude = generalHeadline;
 
             // Filter the main list articles
             final List<ArticlePreview> listArticlesToShow;
@@ -134,9 +116,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
             }
 
             // --- Handle Empty States ---
-            if (generalHeadline == null &&
-                listArticlesToShow.isEmpty &&
-                !showTeamHuddle) {
+            if (generalHeadline == null && listArticlesToShow.isEmpty) {
               if (articlesAsyncValue.isLoading ||
                   selectedTeamAsyncValue is AsyncLoading) {
                 return const LoadingIndicator();
@@ -165,17 +145,9 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
               controller: _scrollController,
               physics: const AlwaysScrollableScrollPhysics(),
               slivers: [
-                // --- Conditional Section: Team Huddle OR Default Headline ---
-                if (showTeamHuddle)
-                  SliverToBoxAdapter(
-                    child: TeamHuddleSection(
-                      teamId: selectedTeamId,
-                      // Pass the specific huddle headline (can be null if no matching article found)
-                      headlineArticle: headlineArticleForHuddle,
-                    ),
-                  )
-                else if (generalHeadline != null)
-                  // Show general headline if no team huddle is displayed
+                // --- Show Default Headline ---
+                if (generalHeadline != null)
+                  // Show general headline
                   SliverToBoxAdapter(
                     child: HeadlineStoryCard(article: generalHeadline),
                   )
