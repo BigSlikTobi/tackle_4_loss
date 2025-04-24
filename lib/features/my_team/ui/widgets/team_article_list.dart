@@ -37,7 +37,13 @@ class TeamArticleList extends ConsumerWidget {
         } else {
           // Data loaded successfully
           final articles = snapshot.data!.articles;
+          // Add debug log for validation
+          debugPrint(
+            '[TeamArticleList] Building ListView with shrinkWrap and NeverScrollableScrollPhysics',
+          );
           return ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
             itemCount: articles.length,
             itemBuilder: (context, index) {
               return ArticleListItem(article: articles[index]);

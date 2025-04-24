@@ -5,16 +5,13 @@ import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 // --- Use GlobalAppBar directly ---
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-// --- REMOVE Preference Provider import if only used for team logo ---
-// import 'package:tackle_4_loss/core/providers/preference_provider.dart';
+import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
 import 'package:tackle_4_loss/features/more/ui/more_options_sheet_content.dart';
 // --- Import Layout Constants ---
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
-
-// --- REMOVE TeamAwareGlobalAppBar ---
-// class TeamAwareGlobalAppBar extends ConsumerWidget ... { ... }
+import 'package:tackle_4_loss/core/constants/team_constants.dart';
 
 class MainNavigationWrapper extends ConsumerWidget {
   const MainNavigationWrapper({super.key});
@@ -43,6 +40,7 @@ class MainNavigationWrapper extends ConsumerWidget {
     final currentLocale = ref.watch(localeNotifierProvider);
     final localeNotifier = ref.read(localeNotifierProvider.notifier);
     final currentDetailId = ref.watch(currentDetailArticleIdProvider);
+    final selectedTeam = ref.watch(selectedTeamNotifierProvider).valueOrNull;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobileLayout = screenWidth < kMobileLayoutBreakpoint;
@@ -94,12 +92,52 @@ class MainNavigationWrapper extends ConsumerWidget {
           showUnselectedLabels: false,
           items:
               appNavItems.map((item) {
-                // --- REMOVE team logo logic from BottomNav ---
-                // if (item.label == 'My Team') { ... }
-                // --- Always show icon ---
+                // If this is the "My Team" item and user has a selected team, show team logo
+                if (item.label == 'My Team' && selectedTeam != null) {
+                  return BottomNavigationBarItem(
+                    icon: SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: Image.asset(
+                        getTeamLogoPath(selectedTeam),
+                        errorBuilder: (context, error, stackTrace) {
+                          // Fallback to default icon if team logo can't be loaded
+                          return item.assetIconPath != null
+                              ? Image.asset(
+                                item.assetIconPath!,
+                                height: 24,
+                                width: 24,
+                              )
+                              : Icon(item.icon);
+                        },
+                      ),
+                    ),
+                    label: '', // Keep labels empty
+                  );
+                }
+                // Use asset icon if provided
+                if (item.assetIconPath != null) {
+                  return BottomNavigationBarItem(
+                    icon: SizedBox(
+                      height: 24,
+                      width: 24,
+                      child: Image.asset(
+                        item.assetIconPath!,
+                        fit: BoxFit.contain,
+                        errorBuilder:
+                            (context, error, stackTrace) =>
+                                item.icon != null
+                                    ? Icon(item.icon)
+                                    : const Icon(Icons.help_outline),
+                      ),
+                    ),
+                    label: '',
+                  );
+                }
+                // Fallback to IconData
                 return BottomNavigationBarItem(
                   icon: Icon(item.icon),
-                  label: '', // Keep labels empty
+                  label: '',
                 );
               }).toList(),
           type: BottomNavigationBarType.fixed,
@@ -149,7 +187,39 @@ class MainNavigationWrapper extends ConsumerWidget {
               ),
               for (int i = 0; i < appNavItems.length; i++)
                 ListTile(
-                  leading: Icon(appNavItems[i].icon),
+                  leading:
+                      i == 1 && selectedTeam != null
+                          ? Image.asset(
+                            getTeamLogoPath(selectedTeam),
+                            height: 24,
+                            width: 24,
+                            errorBuilder: (context, error, stackTrace) {
+                              // Fallback to asset icon or IconData
+                              final item = appNavItems[i];
+                              if (item.assetIconPath != null) {
+                                return Image.asset(
+                                  item.assetIconPath!,
+                                  height: 24,
+                                  width: 24,
+                                );
+                              }
+                              return item.icon != null
+                                  ? Icon(item.icon)
+                                  : const Icon(Icons.help_outline);
+                            },
+                          )
+                          : appNavItems[i].assetIconPath != null
+                          ? Image.asset(
+                            appNavItems[i].assetIconPath!,
+                            height: 24,
+                            width: 24,
+                            errorBuilder:
+                                (context, error, stackTrace) =>
+                                    appNavItems[i].icon != null
+                                        ? Icon(appNavItems[i].icon)
+                                        : const Icon(Icons.help_outline),
+                          )
+                          : Icon(appNavItems[i].icon),
                   title: Text(appNavItems[i].label),
                   selected: i == selectedIndex, // Selection based on index only
                   selectedColor: Theme.of(context).colorScheme.primary,
