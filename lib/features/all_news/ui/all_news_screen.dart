@@ -8,6 +8,8 @@ import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
+import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
+import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 
 const double kMaxContentWidth = 1200.0;
 
@@ -35,6 +37,24 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
     _scrollController.removeListener(_onScroll);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Navigate to article detail screen
+  /// This function updates the currentDetailArticleIdProvider state to show the article detail
+  void navigateToArticleDetail(int articleId) {
+    ref.read(currentDetailArticleIdProvider.notifier).state = articleId;
+    debugPrint(
+      'AllNewsScreen: Navigating to article detail for articleId: $articleId',
+    );
+    // --- Added navigation to ArticleDetailScreen ---
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => ArticleDetailScreen(articleId: articleId),
+      ),
+    );
+    debugPrint(
+      'AllNewsScreen: Pushed ArticleDetailScreen for articleId: $articleId',
+    );
   }
 
   void _onScroll() {
@@ -229,7 +249,12 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                   slivers: [
                     if (headlineArticle != null)
                       SliverToBoxAdapter(
-                        child: HeadlineStoryCard(article: headlineArticle),
+                        child: InkWell(
+                          onTap:
+                              () =>
+                                  navigateToArticleDetail(headlineArticle!.id),
+                          child: HeadlineStoryCard(article: headlineArticle),
+                        ),
                       ),
 
                     SliverPadding(
@@ -253,6 +278,20 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                             }
                             return ArticleListItem(
                               article: listArticlesToShow[index],
+                              onTap: () {
+                                debugPrint(
+                                  'AllNewsScreen: Navigating to detail for articleId: \\${listArticlesToShow[index].id}',
+                                );
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => ArticleDetailScreen(
+                                          articleId:
+                                              listArticlesToShow[index].id,
+                                        ),
+                                  ),
+                                );
+                              },
                             );
                           },
                           childCount:

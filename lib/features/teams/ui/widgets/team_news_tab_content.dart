@@ -4,6 +4,7 @@ import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart'; // Provider for articles
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/article_list_item.dart'; // Widget for list item
+import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 
 class TeamNewsTabContent extends ConsumerStatefulWidget {
   final String teamAbbreviation; // Team ID (e.g., "MIA")
@@ -117,7 +118,22 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
               }
               // Build the article list item
               if (index < articleList.length) {
-                return ArticleListItem(article: articleList[index]);
+                return ArticleListItem(
+                  article: articleList[index],
+                  onTap: () {
+                    debugPrint(
+                      'TeamNewsTabContent: Navigating to detail for articleId: \\${articleList[index].id}',
+                    );
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder:
+                            (context) => ArticleDetailScreen(
+                              articleId: articleList[index].id,
+                            ),
+                      ),
+                    );
+                  },
+                );
               }
               return Container(); // Should not happen
             },

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
+import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 import 'package:tackle_4_loss/features/news_feed/data/news_feed_service.dart';
 import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart'; // To get service provider
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/article_list_item.dart'; // Reuse list item
@@ -46,7 +47,22 @@ class TeamArticleList extends ConsumerWidget {
             physics: const NeverScrollableScrollPhysics(),
             itemCount: articles.length,
             itemBuilder: (context, index) {
-              return ArticleListItem(article: articles[index]);
+              return ArticleListItem(
+                article: articles[index],
+                onTap: () {
+                  debugPrint(
+                    '[TeamArticleList] Navigating to detail for articleId: \\${articles[index].id}',
+                  );
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder:
+                          (context) => ArticleDetailScreen(
+                            articleId: articles[index].id,
+                          ),
+                    ),
+                  );
+                },
+              );
             },
           );
         }

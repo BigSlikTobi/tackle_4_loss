@@ -8,6 +8,7 @@ import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
+import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 
 class NewsFeedScreen extends ConsumerStatefulWidget {
   // Make it const if possible
@@ -190,6 +191,19 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                         }
                         return ArticleListItem(
                           article: listArticlesToShow[index],
+                          onTap: () {
+                            debugPrint(
+                              'NewsFeedScreen: Navigating to detail for articleId: \\${listArticlesToShow[index].id}',
+                            );
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder:
+                                    (context) => ArticleDetailScreen(
+                                      articleId: listArticlesToShow[index].id,
+                                    ),
+                              ),
+                            );
+                          },
                         );
                       },
                       childCount:
