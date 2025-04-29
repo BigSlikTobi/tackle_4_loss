@@ -13,8 +13,13 @@ import 'package:tackle_4_loss/core/constants/team_constants.dart';
 
 class ArticleListItem extends ConsumerWidget {
   final ArticlePreview article;
+  final VoidCallback onTap;
 
-  const ArticleListItem({super.key, required this.article});
+  const ArticleListItem({
+    super.key,
+    required this.article,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,9 +38,10 @@ class ArticleListItem extends ConsumerWidget {
     return Card(
       child: InkWell(
         onTap: () {
-          // --- MODIFIED: Update detail state instead of Navigator.push ---
-          ref.read(currentDetailArticleIdProvider.notifier).state = article.id;
-          // --- End Modification ---
+          debugPrint(
+            'ArticleListItem: onTap called for articleId: \\${article.id}',
+          );
+          onTap();
         },
         borderRadius: BorderRadius.circular(12.0),
         child: Padding(

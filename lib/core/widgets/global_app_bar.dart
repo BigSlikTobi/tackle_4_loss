@@ -26,7 +26,7 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final iconTheme = Theme.of(context).iconTheme;
     final defaultTitle = Image.asset(
       'assets/images/logo.jpg',
-      height: 35,
+      height: 150,
     ); // Default app logo
 
     debugPrint(
