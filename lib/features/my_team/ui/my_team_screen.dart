@@ -97,7 +97,7 @@ class MyTeamScreen extends ConsumerWidget {
                             labelColor: Theme.of(context).colorScheme.primary,
                             unselectedLabelColor: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
+                            ).colorScheme.onSurface.withAlpha(153),
                             indicatorColor:
                                 Theme.of(context).colorScheme.primary,
                             indicatorWeight: 2.5,
