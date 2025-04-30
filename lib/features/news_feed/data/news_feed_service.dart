@@ -1,10 +1,13 @@
 // lib/features/news_feed/data/news_feed_service.dart
 import 'package:flutter/foundation.dart'; // For debugPrint
 import 'package:supabase_flutter/supabase_flutter.dart';
-// Assuming ArticlePreview is in the same directory or adjust import path
+// Keep ArticlePreview if still used elsewhere (e.g., AllNewsScreen)
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
+// --- Import the new cluster story model ---
+import 'package:tackle_4_loss/features/news_feed/data/mapped_cluster_story.dart';
+// --- End Import ---
 
-// Define the response structure expected from the 'articlePreviews' Edge Function
+// Keep the old response structure if getArticlePreviews is still used
 class PaginatedArticlesResponse {
   final List<ArticlePreview> articles;
   final int? nextCursor; // The ID of the last item to use for the next fetch
@@ -12,88 +15,68 @@ class PaginatedArticlesResponse {
   PaginatedArticlesResponse({required this.articles, this.nextCursor});
 }
 
+// --- NEW: Define the response structure for cluster stories ---
+class PaginatedClusterStoriesResponse {
+  final List<MappedClusterStory> stories;
+  final String? nextCursor; // The composite cursor string from backend
+
+  PaginatedClusterStoriesResponse({required this.stories, this.nextCursor});
+}
+// --- End NEW ---
+
 class NewsFeedService {
-  // Use SupabaseClient type for clarity
   final SupabaseClient _supabaseClient;
 
-  // Constructor allows injecting SupabaseClient for easier testing/mocking.
-  // Defaults to the globally initialized Supabase instance if none is provided.
   NewsFeedService({SupabaseClient? supabaseClient})
     : _supabaseClient = supabaseClient ?? Supabase.instance.client;
 
-  // Method to fetch article previews, supporting pagination and team filtering
+  // --- Keep getArticlePreviews if AllNewsScreen still uses it ---
+  // (Assuming this method is still used by AllNewsScreen or other parts)
   Future<PaginatedArticlesResponse> getArticlePreviews({
-    int limit = 20, // Default number of articles per page
-    int? cursor, // Optional: The ID of the last article from the previous page
-    String? teamId, // Optional: Filter articles by team ID (e.g., 'DAL', 'PHI')
+    int limit = 20,
+    int? cursor,
+    String? teamId,
   }) async {
+    // ... (existing implementation remains unchanged) ...
     try {
-      // Name of your Supabase Edge Function
       final functionName = 'articlePreviews';
-
-      // Build the query parameters map
-      final parameters = <String, dynamic>{
-        'limit': limit.toString(), // Ensure parameters are strings for query
-      };
-
-      // Add cursor if provided (for fetching the next page)
+      final parameters = <String, dynamic>{'limit': limit.toString()};
       if (cursor != null) {
         parameters['cursor'] = cursor.toString();
-        debugPrint("Fetching articles with cursor: $cursor");
       }
-
-      // Add teamId filter if provided
       if (teamId != null && teamId.isNotEmpty) {
         parameters['teamId'] = teamId;
-        debugPrint("Fetching articles with teamId filter: $teamId");
-      } else {
-        debugPrint("Fetching articles without teamId filter.");
-      }
+      } else {}
 
-      // Invoke the Edge Function using GET method and query parameters
       final response = await _supabaseClient.functions.invoke(
         functionName,
-        method:
-            HttpMethod.get, // Ensure method matches your Edge Function setup
-        queryParameters: parameters, // Pass parameters in the URL query string
+        method: HttpMethod.get,
+        queryParameters: parameters,
       );
 
-      // --- Error Handling ---
-      // Check for non-200 status codes
       if (response.status != 200) {
-        // Log detailed error information if available
         var errorData = response.data;
         String errorMessage = 'Status code ${response.status}';
         if (errorData is Map && errorData.containsKey('error')) {
           errorMessage += ': ${errorData['error']}';
         } else if (errorData != null) {
           errorMessage +=
-              ': ${errorData.toString().substring(0, 100)}...'; // Log snippet
+              ': ${errorData.toString().substring(0, errorData.toString().length > 100 ? 100 : errorData.toString().length)}...'; // Log snippet
         }
         debugPrint('Error response data: $errorData');
         throw Exception('Failed to load article previews: $errorMessage');
       }
 
-      // Check for null data, which indicates an issue
       if (response.data == null) {
         throw Exception(
           'Failed to load article previews: Received null data from function.',
         );
       }
 
-      // --- Data Parsing ---
-      // Parse the JSON response body
       final responseData = response.data as Map<String, dynamic>;
-
-      // Extract the list of articles, defaulting to empty list if null or not found
       final articlesData = responseData['data'] as List<dynamic>? ?? [];
+      final nextCursorInt = responseData['nextCursor'] as int?;
 
-      // Extract the next cursor value (can be null if it's the last page)
-      final nextCursor =
-          responseData['nextCursor']
-              as int?; // Supabase returns numbers directly usually
-
-      // Map the raw JSON article data to ArticlePreview objects
       final articles =
           articlesData
               .map((json) {
@@ -101,38 +84,127 @@ class NewsFeedService {
                   return ArticlePreview.fromJson(json as Map<String, dynamic>);
                 } catch (e) {
                   debugPrint("Error parsing article JSON: $json - Error: $e");
-                  return null; // Return null for items that fail parsing
+                  return null;
                 }
               })
-              .whereType<
-                ArticlePreview
-              >() // Filter out any nulls from parsing errors
+              .whereType<ArticlePreview>()
               .toList();
 
       debugPrint(
-        "Fetched ${articles.length} articles. Next cursor: $nextCursor",
+        "Fetched ${articles.length} articles using articlePreviews. Next cursor: $nextCursorInt",
       );
 
-      // Return the structured response object
       return PaginatedArticlesResponse(
         articles: articles,
-        nextCursor: nextCursor,
+        nextCursor: nextCursorInt,
       );
     } on FunctionException catch (e) {
-      // Handle specific Supabase function invocation errors
       debugPrint('Supabase FunctionException Details: ${e.details}');
-      debugPrint(
-        'Supabase FunctionException toString(): ${e.toString()}',
-      ); // Default string representation
-
-      // Use e.details or e.toString() for the re-thrown exception message
+      debugPrint('Supabase FunctionException toString(): ${e.toString()}');
       final errorMessage = e.details?.toString() ?? e.toString();
       throw Exception('Error fetching articles: $errorMessage');
     } catch (e, stacktrace) {
-      // Handle other potential errors (network issues, parsing errors, etc.)
       debugPrint('Generic error fetching articles: $e');
       debugPrint('Stacktrace: $stacktrace');
       throw Exception('An unexpected error occurred while fetching news.');
+    }
+  }
+  // --- End getArticlePreviews ---
+
+  // --- NEW: Method to fetch Cluster Stories ---
+  Future<PaginatedClusterStoriesResponse> fetchClusterStories({
+    int limit = 10, // Use a reasonable default for vertical pages
+    String? cursor, // The string cursor from the backend
+  }) async {
+    debugPrint(
+      "Fetching cluster stories ${cursor != null ? 'after cursor "$cursor"' : ''} (limit $limit)...",
+    );
+    try {
+      final functionName = 'clusterStories'; // Your new function name
+
+      final parameters = <String, String>{'limit': limit.toString()};
+
+      if (cursor != null && cursor.isNotEmpty) {
+        parameters['cursor'] = cursor;
+        debugPrint("Using cursor: $cursor");
+      }
+
+      final response = await _supabaseClient.functions.invoke(
+        functionName,
+        method: HttpMethod.get,
+        queryParameters: parameters,
+      );
+
+      // --- Error Handling ---
+      if (response.status != 200) {
+        var errorData = response.data;
+        String errorMessage = 'Status code ${response.status}';
+        if (errorData is Map && errorData.containsKey('error')) {
+          errorMessage += ': ${errorData['error']}';
+        } else if (errorData != null) {
+          errorMessage +=
+              ': ${errorData.toString().substring(0, errorData.toString().length > 100 ? 100 : response.data.toString().length)}...';
+        }
+        debugPrint('Error response data: $errorData');
+        throw Exception('Failed to load cluster stories: $errorMessage');
+      }
+
+      if (response.data == null) {
+        throw Exception(
+          'Failed to load cluster stories: Received null data from function.',
+        );
+      }
+
+      // Assuming the backend always returns { "data": [...], "nextCursor": "..." }
+      final responseData = response.data as Map<String, dynamic>;
+
+      final List<dynamic>? storiesData = responseData['data'] as List<dynamic>?;
+      final String? nextCursor = responseData['nextCursor'] as String?;
+
+      if (storiesData == null) {
+        debugPrint("Warning: 'data' key is missing or null in response.");
+        return PaginatedClusterStoriesResponse(stories: [], nextCursor: null);
+      }
+
+      final List<MappedClusterStory> clusterStories =
+          storiesData
+              .map((json) {
+                try {
+                  if (json is Map<String, dynamic>) {
+                    return MappedClusterStory.fromJson(json);
+                  } else {
+                    debugPrint("Skipping invalid cluster story JSON: $json");
+                    return null;
+                  }
+                } catch (e, s) {
+                  debugPrint(
+                    "Error parsing cluster story JSON: $json - Error: $e\nStackTrace: $s",
+                  );
+                  return null;
+                }
+              })
+              .whereType<MappedClusterStory>()
+              .toList();
+
+      debugPrint(
+        "Fetched ${clusterStories.length} cluster stories. Next cursor: $nextCursor",
+      );
+
+      return PaginatedClusterStoriesResponse(
+        stories: clusterStories,
+        nextCursor: nextCursor,
+      );
+    } on FunctionException catch (e) {
+      debugPrint('Supabase FunctionException Details: ${e.details}');
+      debugPrint('Supabase FunctionException toString(): ${e.toString()}');
+      final errorMessage = e.details?.toString() ?? e.toString();
+      throw Exception('Error invoking clusterStories function: $errorMessage');
+    } catch (e, stacktrace) {
+      debugPrint('Generic error fetching cluster stories: $e');
+      debugPrint('Stacktrace: $stacktrace');
+      throw Exception(
+        'An unexpected error occurred while fetching cluster stories.',
+      );
     }
   }
 }

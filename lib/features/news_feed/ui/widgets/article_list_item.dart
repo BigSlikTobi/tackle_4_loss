@@ -5,10 +5,6 @@ import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:intl/intl.dart';
-// Removed import for ArticleDetailScreen
-// Import navigation provider to update detail state
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
-// Import team constants for logo handling
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
 
 class ArticleListItem extends ConsumerWidget {
