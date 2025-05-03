@@ -38,44 +38,19 @@ class RealtimeService {
     debugPrint("Initializing Realtime listeners for $_newsArticlesTable...");
     final channelName = 'db-$_newsArticlesTable-inserts';
     _newsArticlesChannel = _supabaseClient.channel(channelName);
-    _newsArticlesChannel!
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: _dbSchema,
-          table: _newsArticlesTable,
-          callback: (payload) {
-            debugPrint("---!!! Realtime Event Received by Flutter App !!!---");
-            // This callback still runs when the app is in the FOREGROUND.
-            // It no longer triggers the push, but can be used for live UI updates.
-            _handleNewsInsert(payload.newRecord);
-          },
-        )
-        .subscribe((status, [error]) async {
-          // --- Corrected detailed status logging ---
-          debugPrint("--- Realtime Subscription Status Changed ---");
-          debugPrint("Channel: $channelName, Status: $status");
-          if (error != null) {
-            // Log the error using toString() for general info
-            debugPrint("Error accompanying status change: ${error.toString()}");
-            // Avoid specific type checks like 'is RealtimeError' unless the type is guaranteed
-          }
-          debugPrint("------------------------------------------");
-          // --- End Logging ---
-
-          if (status == RealtimeSubscribeStatus.subscribed) {
-            debugPrint("✅ Realtime channel subscribed: $channelName");
-          } else if (status == RealtimeSubscribeStatus.channelError ||
-              status == RealtimeSubscribeStatus.timedOut) {
-            // Error already logged above
-          } else {
-            // Log other statuses if needed (e.g., RealtimeSubscribeStatus.closed)
-            debugPrint(
-              "ℹ️ Realtime channel status ($channelName) is now: $status",
-            );
-          }
-        });
+    // Register INSERT event handler and subscribe without callback to avoid type mismatches
+    _newsArticlesChannel!.onPostgresChanges(
+      event: PostgresChangeEvent.insert,
+      schema: _dbSchema,
+      table: _newsArticlesTable,
+      callback: (payload) {
+        debugPrint("---!!! Realtime Event Received by Flutter App !!!---");
+        _handleNewsInsert(payload.newRecord);
+      },
+    );
+    _newsArticlesChannel!.subscribe();
     debugPrint(
-      "Listening for INSERT events on $_dbSchema.$_newsArticlesTable via callback.",
+      "✅ Realtime channel subscribed: $channelName. Listening for INSERT events on $_dbSchema.$_newsArticlesTable.",
     );
   }
 

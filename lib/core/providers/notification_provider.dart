@@ -1,4 +1,3 @@
-// lib/core/providers/notification_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/core/services/notification_service.dart';
 
