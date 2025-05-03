@@ -1,63 +1,47 @@
-// lib/features/news_feed/logic/news_feed_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// Keep old imports if still needed for other screens (e.g. AllNewsScreen)
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/features/news_feed/data/news_feed_service.dart';
-// Keep old state if still needed
 import 'package:tackle_4_loss/features/news_feed/logic/news_feed_state.dart';
-// --- Import the new cluster story model ---
 import 'package:tackle_4_loss/features/news_feed/data/mapped_cluster_story.dart';
-// --- REMOVE Source Constants Import ---
-// import 'package:tackle_4_loss/core/constants/source_constants.dart';
-// --- End Imports ---
 
 // Keep the old state provider if still used (maybe for AllNewsScreen?)
 final newsFeedDisplayModeProvider = StateProvider<NewsFeedDisplayMode>(
   (ref) => NewsFeedDisplayMode.all,
 );
 
-// --- NEW: Provider to track whether we're in gallery view or detail view ---
-enum GalleryViewMode {
-  gallery, // Grid of thumbnails
-  detail, // Full-screen detail view
-}
-
-final galleryViewModeProvider = StateProvider<GalleryViewMode>(
-  (ref) => GalleryViewMode.gallery, // Default to gallery view
-);
-
-// --- NEW: Provider to track the currently selected story in gallery mode ---
-final selectedGalleryItemIndexProvider = StateProvider<int?>(
-  (ref) => null, // null means no item selected
-);
-
+// --- NEW: Provider for PageView indicator ---
+final featuredPageIndexProvider = StateProvider<int>((ref) => 0);
 // --- End NEW ---
 
 final newsFeedServiceProvider = Provider<NewsFeedService>((ref) {
   return NewsFeedService();
 });
 
-// Keep the old paginated articles provider if still used by AllNewsScreen
+// Keep the old paginated articles provider (used for the grid now)
+// Make sure family parameter 'null' fetches all articles as intended
 final paginatedArticlesProvider = AsyncNotifierProvider.family<
   PaginatedArticlesNotifier,
   List<ArticlePreview>,
-  String?
+  String? // Filter parameter (null for all news feed grid)
 >(() => PaginatedArticlesNotifier());
 
-// Keep the old notifier if still used by AllNewsScreen
+// Keep the old notifier (used for the grid now)
 class PaginatedArticlesNotifier
     extends FamilyAsyncNotifier<List<ArticlePreview>, String?> {
-  // ... (existing implementation remains unchanged) ...
+  // Internal state for pagination
   int? _nextCursor;
   bool _isLoadingMore = false;
   bool _hasMore = true;
   List<ArticlePreview> _allFetchedArticles = [];
 
+  String? get _filter => arg; // Use arg to access the filter parameter
+
   @override
-  Future<List<ArticlePreview>> build(String? filterTeamId) async {
+  Future<List<ArticlePreview>> build(String? filter) async {
     final service = ref.watch(newsFeedServiceProvider);
+    // Reset state on initial build/rebuild
     _nextCursor = null;
     _hasMore = true;
     _isLoadingMore = false;
@@ -65,41 +49,34 @@ class PaginatedArticlesNotifier
 
     try {
       debugPrint(
-        "AsyncNotifier build (PaginatedArticles Family: $filterTeamId): Fetching initial page...",
+        "PaginatedArticlesNotifier build (Family: $_filter): Fetching initial page...",
       );
       final response = await service.getArticlePreviews(
-        limit: 20,
-        teamId: filterTeamId,
+        limit: 20, // Or adjust limit for grid
+        teamId: _filter, // Use the family parameter
       );
 
       _allFetchedArticles = response.articles;
       _nextCursor = response.nextCursor;
       _hasMore = _nextCursor != null;
       debugPrint(
-        "AsyncNotifier build (PaginatedArticles Family: $filterTeamId): Fetched ${_allFetchedArticles.length} articles. Next cursor: $_nextCursor HasMore: $_hasMore",
+        "PaginatedArticlesNotifier build (Family: $_filter): Fetched ${_allFetchedArticles.length} articles. Next cursor: $_nextCursor HasMore: $_hasMore",
       );
       return _allFetchedArticles;
     } catch (e, stack) {
       debugPrint(
-        "Error in AsyncNotifier build (PaginatedArticles Family: $filterTeamId): $e\n$stack",
+        "Error in PaginatedArticlesNotifier build (Family: $_filter): $e\n$stack",
       );
       _hasMore = false;
       throw Exception(
-        "Failed to load initial articles for filter $filterTeamId: $e",
+        "Failed to load initial articles for filter $_filter: $e",
       );
     }
   }
 
-  // loadOlder might need rethink later, keeping it simple for now
-  Future<void> loadOlder() async {
-    debugPrint("loadOlder called (PaginatedArticles).");
-    ref.read(newsFeedDisplayModeProvider.notifier).state =
-        NewsFeedDisplayMode.all;
-    debugPrint("Display mode set to 'all'.");
-  }
-
   Future<void> fetchNextPage() async {
-    final String? filterTeamId = arg;
+    // Use the family parameter 'arg' stored in _filter
+    final filterTeamId = _filter;
     final currentState = state.valueOrNull;
 
     if (currentState == null ||
@@ -107,15 +84,18 @@ class PaginatedArticlesNotifier
         !_hasMore ||
         _nextCursor == null) {
       debugPrint(
-        "fetchNextPage skipped (PaginatedArticles Family: $filterTeamId): loading=$_isLoadingMore, hasMore=$_hasMore, cursor=$_nextCursor",
+        "fetchNextPage skipped (PaginatedArticlesNotifier Family: $filterTeamId): loading=$_isLoadingMore, hasMore=$_hasMore, cursor=$_nextCursor",
       );
       return;
     }
 
     debugPrint(
-      "Fetching next page (PaginatedArticles Family: $filterTeamId) with cursor: $_nextCursor",
+      "Fetching next page (PaginatedArticlesNotifier Family: $filterTeamId) with cursor: $_nextCursor",
     );
     _isLoadingMore = true;
+
+    // Add loading state feedback if desired, e.g., by modifying the AsyncValue state temporarily
+    // state = AsyncLoading<List<ArticlePreview>>().copyWithPrevious(state); // Example
 
     final service = ref.read(newsFeedServiceProvider);
     final currentCursor = _nextCursor;
@@ -123,8 +103,8 @@ class PaginatedArticlesNotifier
     try {
       final response = await service.getArticlePreviews(
         cursor: currentCursor,
-        limit: 20,
-        teamId: filterTeamId,
+        limit: 20, // Or adjust limit for grid
+        teamId: filterTeamId, // Pass the filter
       );
 
       _nextCursor = response.nextCursor;
@@ -133,36 +113,37 @@ class PaginatedArticlesNotifier
 
       state = AsyncData<List<ArticlePreview>>(_allFetchedArticles);
       debugPrint(
-        "Next page fetched (PaginatedArticles Family: $filterTeamId). Total articles: ${_allFetchedArticles.length}. Has more: $_hasMore",
+        "Next page fetched (PaginatedArticlesNotifier Family: $filterTeamId). Total articles: ${_allFetchedArticles.length}. Has more: $_hasMore",
       );
     } catch (e, stack) {
       debugPrint(
-        "Error fetching next page (PaginatedArticles Family: $filterTeamId) after cursor $currentCursor: $e\n$stack",
+        "Error fetching next page (PaginatedArticlesNotifier Family: $filterTeamId) after cursor $currentCursor: $e\n$stack",
       );
+      // Keep existing data but show error state
       state = AsyncError<List<ArticlePreview>>(
         e,
         stack,
       ).copyWithPrevious(state);
-      _hasMore = false;
+      _hasMore = false; // Stop trying to paginate on error
     } finally {
       _isLoadingMore = false;
     }
   }
+
+  // --- NEW: Helper for UI to check loading state ---
+  bool get isLoadingMore => _isLoadingMore;
+  // --- NEW: Helper for UI to check if more pages exist ---
+  bool get hasMore => _hasMore;
 }
 
-// --- REMOVE: Provider for the selected source filter ---
-// final selectedSourceFilterProvider = StateProvider<int?>((ref) => null);
-
-// --- MODIFY: Change to a non-family AsyncNotifierProvider ---
+// Keep ClusterStoriesNotifier as is (used for the featured PageView)
 final clusterStoriesProvider =
     AsyncNotifierProvider<ClusterStoriesNotifier, List<MappedClusterStory>>(
       () => ClusterStoriesNotifier(),
     );
 
-// --- MODIFY: Update ClusterStoriesNotifier ---
-// Remove the family argument (int? arg)
 class ClusterStoriesNotifier extends AsyncNotifier<List<MappedClusterStory>> {
-  // Internal state for pagination (remains the same)
+  // Internal state for pagination
   String? _nextCursor;
   bool _isLoadingMore = false;
   bool _hasMore = true;
@@ -170,30 +151,22 @@ class ClusterStoriesNotifier extends AsyncNotifier<List<MappedClusterStory>> {
   // Store the list of stories fetched (no longer filtered internally)
   List<MappedClusterStory> _allFetchedStories = [];
 
-  // --- BUILD Method: Initial fetch (no family argument) ---
   @override
   Future<List<MappedClusterStory>> build() async {
     final service = ref.watch(newsFeedServiceProvider);
-    // --- Reset internal state on initial build/rebuild ---
+    // Reset internal state on initial build/rebuild
     _nextCursor = null;
     _hasMore = true;
     _isLoadingMore = false;
     _allFetchedStories = [];
     debugPrint("ClusterStoriesNotifier build: Fetching initial page...");
-    // --- End Reset ---
 
     try {
-      // Fetch the first page from the backend (no source filter applied here)
       final response = await service.fetchClusterStories(
-        limit: 40, // Increased initial fetch limit for better UX
+        limit: 5, // Fetch only a few for the featured section initially
       );
 
-      // --- REMOVE Frontend Filtering Logic ---
-      _allFetchedStories =
-          response.stories; // Store the full fetched list directly
-      // --- End REMOVE ---
-
-      // The nextCursor provided by the backend is for the full list.
+      _allFetchedStories = response.stories;
       _nextCursor = response.nextCursor;
       _hasMore = _nextCursor != null;
 
@@ -204,7 +177,7 @@ class ClusterStoriesNotifier extends AsyncNotifier<List<MappedClusterStory>> {
         "Has more (based on backend cursor): $_hasMore",
       );
 
-      return _allFetchedStories; // Return the full list
+      return _allFetchedStories;
     } catch (e, stack) {
       debugPrint("Error in ClusterStoriesNotifier build: $e\n$stack");
       _hasMore = false; // Stop pagination on error
@@ -212,11 +185,11 @@ class ClusterStoriesNotifier extends AsyncNotifier<List<MappedClusterStory>> {
     }
   }
 
-  // --- Method to fetch the next page (no family argument needed) ---
+  // --- Keep fetchNextPage if horizontal pagination is ever needed ---
+  // --- Currently NOT used by the new NewsFeedScreen structure ---
   Future<void> fetchNextPage() async {
-    final currentState = state.valueOrNull; // Get current data state
+    final currentState = state.valueOrNull;
 
-    // Check state for the *unfiltered* list
     if (currentState == null ||
         _isLoadingMore ||
         !_hasMore ||
@@ -232,28 +205,17 @@ class ClusterStoriesNotifier extends AsyncNotifier<List<MappedClusterStory>> {
     );
     _isLoadingMore = true;
 
-    // Temporarily update state to indicate loading more (optional, UI can check _isLoadingMore flag)
-    // state = AsyncData(currentState.copyWith(isLoadingNextPage: true)); // Example if state had isLoadingNextPage
-
     final service = ref.read(newsFeedServiceProvider);
     final currentBackendCursor = _nextCursor;
 
     try {
-      // Fetch the next page from the backend using the current backend cursor
       final response = await service.fetchClusterStories(
         cursor: currentBackendCursor,
-        limit: 10,
+        limit: 5, // Fetch small batches
       );
 
-      // --- REMOVE Frontend Filtering Logic ---
-      // Append the new stories to the existing list directly
       _allFetchedStories = [..._allFetchedStories, ...response.stories];
-      // --- End REMOVE ---
-
-      // Update the backend cursor for the *next* fetch request
       _nextCursor = response.nextCursor;
-
-      // Determine if there's potentially more data from the backend
       _hasMore = response.nextCursor != null;
 
       debugPrint(
@@ -264,29 +226,24 @@ class ClusterStoriesNotifier extends AsyncNotifier<List<MappedClusterStory>> {
         "Has more (based on backend cursor): $_hasMore",
       );
 
-      // Update the state with the combined list
       state = AsyncData<List<MappedClusterStory>>(_allFetchedStories);
     } catch (e, stack) {
       debugPrint(
         "Error fetching next page (ClusterStoriesNotifier) after cursor $currentBackendCursor: $e\n$stack",
       );
-      // On error, keep existing data but indicate error state and stop pagination
       state = AsyncError<List<MappedClusterStory>>(
         e,
         stack,
       ).copyWithPrevious(state);
-      _hasMore = false; // Stop fetching on error
+      _hasMore = false;
     } finally {
       _isLoadingMore = false;
     }
   }
 
-  // --- Helper to indicate if more data is being loaded (for UI) ---
+  // Helpers remain the same
   bool get isLoadingMore => _isLoadingMore;
-  // --- Helper to indicate if there is potentially more data ---
   bool get hasMore => _hasMore;
 }
-// --- End MODIFY ---
 
-// Keep: Provider to track the current page index in the PageView
-final currentClusterStoryIndexProvider = StateProvider<int>((ref) => 0);
+// --- REMOVED: currentClusterStoryIndexProvider - handled by featuredPageIndexProvider ---

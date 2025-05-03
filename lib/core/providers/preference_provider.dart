@@ -1,4 +1,3 @@
-// lib/core/providers/preference_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
