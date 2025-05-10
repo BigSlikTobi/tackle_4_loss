@@ -1,10 +1,13 @@
+// File: lib/features/news_feed/ui/widgets/cluster_info_grid_item.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
-import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart'; // Import new model
+import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
+// REMOVE: import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
+// --- ADD IMPORT FOR CLUSTER DETAIL SCREEN ---
+import 'package:tackle_4_loss/features/cluster_detail/ui/cluster_detail_screen.dart';
 
 class ClusterInfoGridItem extends ConsumerWidget {
   final ClusterInfo cluster;
@@ -21,13 +24,10 @@ class ClusterInfoGridItem extends ConsumerWidget {
       currentLocale.languageCode,
     );
     final imageUrl = cluster.primaryImageUrl;
-    final int? representativeArticleId =
-        cluster.representativeArticleIdForNavigation;
+    // REMOVE: final int? representativeArticleId = cluster.representativeArticleIdForNavigation;
 
-    // --- FIX: Wrap Card in AspectRatio ---
     return AspectRatio(
-      aspectRatio:
-          1.0, // Makes the card square. Adjust as needed (e.g., 4/3 for landscape-ish)
+      aspectRatio: 1.0,
       child: Card(
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
@@ -36,22 +36,18 @@ class ClusterInfoGridItem extends ConsumerWidget {
         elevation: 2.0,
         child: InkWell(
           onTap: () {
-            if (representativeArticleId != null) {
-              debugPrint(
-                "Tapped Cluster Grid Item ${cluster.clusterId}. Navigating to detail for Article ID: $representativeArticleId",
-              );
-              ref.read(currentDetailArticleIdProvider.notifier).state =
-                  representativeArticleId;
-            } else {
-              debugPrint(
-                "Tapped Cluster Grid Item ${cluster.clusterId}, but no representative article ID for navigation.",
-              );
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Cannot open details for this story yet.'),
-                ),
-              );
-            }
+            // --- MODIFIED NAVIGATION ---
+            debugPrint(
+              "Tapped Cluster Grid Item ${cluster.clusterId}. Navigating to Cluster Detail Screen.",
+            );
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder:
+                    (context) =>
+                        ClusterDetailScreen(clusterId: cluster.clusterId),
+              ),
+            );
+            // --- END MODIFIED NAVIGATION ---
           },
           child: Stack(
             fit: StackFit.expand,
@@ -77,12 +73,16 @@ class ClusterInfoGridItem extends ConsumerWidget {
               else
                 Positioned.fill(
                   child: Container(
-                    color: AppColors.primaryGreen.withOpacity(0.1),
+                    color: AppColors.primaryGreen.withAlpha(
+                      26,
+                    ), // 0.1 * 255 ≈ 26
                     child: Center(
                       child: Icon(
                         Icons.dashboard_customize_outlined,
                         size: 40,
-                        color: AppColors.primaryGreen.withOpacity(0.5),
+                        color: AppColors.primaryGreen.withAlpha(
+                          128,
+                        ), // 0.5 * 255 ≈ 128
                       ),
                     ),
                   ),
@@ -93,7 +93,7 @@ class ClusterInfoGridItem extends ConsumerWidget {
                     gradient: LinearGradient(
                       colors: [
                         Colors.transparent,
-                        Colors.black.withOpacity(0.75),
+                        Colors.black.withAlpha(191), // 0.75 * 255 ≈ 191
                       ],
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
@@ -119,7 +119,7 @@ class ClusterInfoGridItem extends ConsumerWidget {
                       shadows: [
                         Shadow(
                           blurRadius: 2.0,
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.black.withAlpha(128), // 0.5 * 255 ≈ 128
                           offset: const Offset(1, 1),
                         ),
                       ],
@@ -135,6 +135,5 @@ class ClusterInfoGridItem extends ConsumerWidget {
         ),
       ),
     );
-    // --- End FIX ---
   }
 }

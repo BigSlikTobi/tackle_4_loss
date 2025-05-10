@@ -6,10 +6,7 @@ import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart';
-import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
-import 'package:intl/intl.dart';
 import 'dart:math' as math; // For min function
 
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/nfl_headline_item_card.dart';
@@ -489,7 +486,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
     BuildContext context,
     AsyncValue<List<ArticlePreview>> otherNewsDataAsync,
   ) {
-    final theme = Theme.of(context);
+    Theme.of(context);
     final currentPage = ref.watch(otherNewsCurrentPageProvider);
     final articlesNotifier = ref.read(paginatedArticlesProvider(null).notifier);
 
@@ -519,8 +516,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
         // Determine total pages based on ALL fetched items so far.
         // This might need to be adjusted if we want to show total pages based on a backend count.
         final totalFetched = articlesNotifier.totalFetchedItems;
-        final totalPossiblePages =
-            (totalFetched / otherNewsItemsPerPage).ceil();
+        (totalFetched / otherNewsItemsPerPage).ceil();
         // If hasMoreData is true, we might have more pages than currently calculated from fetched items.
         // For now, we paginate based on what's fetched.
 
