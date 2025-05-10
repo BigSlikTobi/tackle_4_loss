@@ -70,12 +70,16 @@ class NflHeadlineItemCard extends ConsumerWidget {
                             ),
                       )
                       : Container(
-                        color: AppColors.primaryGreen.withOpacity(0.8),
+                        color: AppColors.primaryGreen.withAlpha(
+                          204,
+                        ), // 0.8 * 255 ≈ 204
                         child: Center(
                           child: Image.asset(
                             'assets/images/logo.jpg', // Fallback app logo
                             width: 100,
-                            color: AppColors.white.withOpacity(0.5),
+                            color: AppColors.white.withAlpha(
+                              128,
+                            ), // 0.5 * 255 ≈ 128
                           ),
                         ),
                       ),
@@ -86,9 +90,9 @@ class NflHeadlineItemCard extends ConsumerWidget {
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Colors.black.withOpacity(0.0),
-                      Colors.black.withOpacity(0.2),
-                      Colors.black.withOpacity(0.85),
+                      Colors.black.withAlpha(0), // 0.0 * 255 = 0
+                      Colors.black.withAlpha(51), // 0.2 * 255 ≈ 51
+                      Colors.black.withAlpha(217), // 0.85 * 255 ≈ 217
                     ],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
@@ -112,7 +116,7 @@ class NflHeadlineItemCard extends ConsumerWidget {
                       shadows: [
                         Shadow(
                           blurRadius: 2.0,
-                          color: Colors.black.withOpacity(0.5),
+                          color: Colors.black.withAlpha(128), // 0.5 * 255 ≈ 128
                           offset: const Offset(1, 1),
                         ),
                       ],
@@ -127,7 +131,9 @@ class NflHeadlineItemCard extends ConsumerWidget {
                       Text(
                         sourceName, // Should be "NFL" or from sourceIdToDisplayName
                         style: textTheme.bodySmall?.copyWith(
-                          color: AppColors.white.withOpacity(0.8),
+                          color: AppColors.white.withAlpha(
+                            204,
+                          ), // 0.8 * 255 ≈ 204
                         ),
                       ),
                       // Separator if date exists
@@ -137,7 +143,9 @@ class NflHeadlineItemCard extends ConsumerWidget {
                           child: Text(
                             '•',
                             style: textTheme.bodySmall?.copyWith(
-                              color: AppColors.white.withOpacity(0.6),
+                              color: AppColors.white.withAlpha(
+                                153,
+                              ), // 0.6 * 255 ≈ 153
                             ),
                           ),
                         ),
@@ -149,7 +157,9 @@ class NflHeadlineItemCard extends ConsumerWidget {
                             currentLocale.languageCode,
                           ).format(article.createdAt!.toLocal()),
                           style: textTheme.bodySmall?.copyWith(
-                            color: AppColors.white.withOpacity(0.8),
+                            color: AppColors.white.withAlpha(
+                              204,
+                            ), // 0.8 * 255 ≈ 204
                           ),
                         ),
                       const Spacer(),
@@ -162,11 +172,15 @@ class NflHeadlineItemCard extends ConsumerWidget {
                           width: 28,
                           decoration: BoxDecoration(
                             // The white background for the logo to "pop"
-                            color: AppColors.white.withOpacity(0.9),
+                            color: AppColors.white.withAlpha(
+                              230,
+                            ), // 0.9 * 255 ≈ 230
                             shape: BoxShape.circle,
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.3),
+                                color: Colors.black.withAlpha(
+                                  77,
+                                ), // 0.3 * 255 ≈ 77
                                 blurRadius: 2, // Softer shadow
                                 offset: const Offset(0, 1),
                               ),

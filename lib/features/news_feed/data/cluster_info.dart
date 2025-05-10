@@ -100,7 +100,7 @@ class ClusterInfo {
     // Example: If clusterId could be parsed or looked up.
     // For now, returning null as we don't have this from the EF.
     debugPrint(
-      "Warning: Attempting to get representativeArticleIdForNavigation for cluster ${this.clusterId}, but it's not available from 'cluster_infos' EF.",
+      "Warning: Attempting to get representativeArticleIdForNavigation for cluster $clusterId, but it's not available from 'cluster_infos' EF.",
     );
     return null;
   }
