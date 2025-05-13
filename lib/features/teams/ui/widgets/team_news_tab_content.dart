@@ -8,8 +8,13 @@ import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.d
 
 class TeamNewsTabContent extends ConsumerStatefulWidget {
   final String teamAbbreviation; // Team ID (e.g., "MIA")
+  final int? excludeArticleId;
 
-  const TeamNewsTabContent({super.key, required this.teamAbbreviation});
+  const TeamNewsTabContent({
+    super.key,
+    required this.teamAbbreviation,
+    this.excludeArticleId, // Make it optional
+  });
 
   @override
   ConsumerState<TeamNewsTabContent> createState() => _TeamNewsTabContentState();
@@ -22,6 +27,9 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
   void initState() {
     super.initState();
     _scrollController.addListener(_onScroll);
+    debugPrint(
+      "[TeamNewsTabContent initState] Team: ${widget.teamAbbreviation}, Exclude ID: ${widget.excludeArticleId}",
+    );
   }
 
   @override
@@ -32,11 +40,8 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
   }
 
   void _onScroll() {
-    // Check if near the bottom of the list
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 300) {
-      // Adjust threshold if needed
-      // Trigger fetchNextPage on the correct provider instance for this team
       ref
           .read(paginatedArticlesProvider(widget.teamAbbreviation).notifier)
           .fetchNextPage();
@@ -44,49 +49,80 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
   }
 
   Future<void> _handleRefresh() async {
+    debugPrint(
+      "[TeamNewsTabContent _handleRefresh] Invalidating paginatedArticlesProvider for ${widget.teamAbbreviation}. Exclude ID: ${widget.excludeArticleId}",
+    );
     // Invalidate the provider for this specific team to refresh
     ref.invalidate(paginatedArticlesProvider(widget.teamAbbreviation));
-    // Optional: await the future to keep the indicator showing until data is loaded
+    // For pull-to-refresh, you might want to ensure the refresh indicator stays
+    // until the data is actually re-fetched. You can await the future of the provider.
+    // However, since invalidation itself triggers a rebuild when data is ready,
+    // simply invalidating is often enough. If you need the indicator to persist,
+    // you can do:
     // await ref.read(paginatedArticlesProvider(widget.teamAbbreviation).future);
+    // But be cautious as this will make the onRefresh function async and hold the indicator.
   }
 
   @override
   Widget build(BuildContext context) {
-    // Watch the specific family instance of the articles provider for this team
     final articlesAsyncValue = ref.watch(
       paginatedArticlesProvider(widget.teamAbbreviation),
     );
 
+    debugPrint(
+      "[TeamNewsTabContent build] Team: ${widget.teamAbbreviation}, Exclude ID: ${widget.excludeArticleId}, AsyncState: $articlesAsyncValue",
+    );
+
+    // --- MODIFICATION: Wrap with RefreshIndicator ---
     return RefreshIndicator(
       onRefresh: _handleRefresh,
       child: articlesAsyncValue.when(
         data: (articleList) {
-          // Receives List<ArticlePreview>
+          final List filteredArticleList;
+          if (widget.excludeArticleId != null) {
+            filteredArticleList =
+                articleList
+                    .where((article) => article.id != widget.excludeArticleId)
+                    .toList();
+            debugPrint(
+              "[TeamNewsTabContent build data] Original list count: ${articleList.length}. Filtered list count (excluding ${widget.excludeArticleId}): ${filteredArticleList.length}",
+            );
+          } else {
+            filteredArticleList = articleList;
+            debugPrint(
+              "[TeamNewsTabContent build data] Original list count: ${articleList.length}. No excludeArticleId provided.",
+            );
+          }
 
-          // Check if the list is empty after successful load
-          if (articleList.isEmpty && !articlesAsyncValue.isLoading) {
-            // Added isLoading check
-            // Check if underlying provider IS loading (maybe after invalidate but before new data)
+          if (filteredArticleList.isEmpty && !articlesAsyncValue.isLoading) {
             final isLoading =
                 ref
                     .watch(paginatedArticlesProvider(widget.teamAbbreviation))
                     .isLoading;
             if (isLoading) {
-              return const LoadingIndicator(); // Show loading if actively fetching
+              return const Center(
+                child: LoadingIndicator(),
+              ); // Keep centered for initial load case
             }
 
             return LayoutBuilder(
-              // Use LayoutBuilder to enable refresh even when empty
               builder: (context, constraints) {
+                // Make the empty content scrollable to enable pull-to-refresh
                 return SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
+                      minHeight:
+                          constraints.maxHeight > 0
+                              ? constraints.maxHeight
+                              : 200, // Ensure some min height
                     ),
                     child: Center(
-                      child: Text(
-                        "No news found for ${widget.teamAbbreviation}.",
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Text(
+                          "No news found for ${widget.teamAbbreviation}.",
+                        ),
                       ),
                     ),
                   ),
@@ -95,81 +131,83 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
             );
           }
 
-          // Need to check if the *notifier* itself indicates loading next page
-          // Accessing the state directly might be complex, alternatively use isLoading of the main provider
           final isLoadingNextPage =
-              articlesAsyncValue.isLoading && articleList.isNotEmpty;
+              articlesAsyncValue.isLoading && filteredArticleList.isNotEmpty;
 
-          // Build the list using ListView.builder
           return ListView.builder(
             controller: _scrollController,
-            physics:
-                const AlwaysScrollableScrollPhysics(), // Ensure scrollable for RefreshIndicator
-            itemCount:
-                articleList.length +
-                (isLoadingNextPage ? 1 : 0), // Add 1 for loading indicator
+            physics: const AlwaysScrollableScrollPhysics(),
+            itemCount: filteredArticleList.length + (isLoadingNextPage ? 1 : 0),
             itemBuilder: (context, index) {
-              // If it's the last item and we are loading more, show indicator
-              if (index == articleList.length && isLoadingNextPage) {
+              if (index == filteredArticleList.length && isLoadingNextPage) {
                 return const Padding(
                   padding: EdgeInsets.symmetric(vertical: 16.0),
                   child: LoadingIndicator(),
                 );
               }
-              // Build the article list item
-              if (index < articleList.length) {
+              if (index < filteredArticleList.length) {
                 return ArticleListItem(
-                  article: articleList[index],
+                  article: filteredArticleList[index],
                   onTap: () {
                     debugPrint(
-                      'TeamNewsTabContent: Navigating to detail for articleId: \\${articleList[index].id}',
+                      'TeamNewsTabContent: Navigating to detail for articleId: ${filteredArticleList[index].id}',
                     );
                     Navigator.of(context).push(
                       MaterialPageRoute(
                         builder:
                             (context) => ArticleDetailScreen(
-                              articleId: articleList[index].id,
+                              articleId: filteredArticleList[index].id,
                             ),
                       ),
                     );
                   },
                 );
               }
-              return Container(); // Should not happen
+              return Container();
             },
           );
         },
-        // Show full screen loading indicator on initial load
-        loading: () => const LoadingIndicator(),
-        // Show full screen error message on initial load error
-        error:
-            (error, stackTrace) => LayoutBuilder(
-              // Allow refresh on error
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  child: ConstrainedBox(
-                    constraints: BoxConstraints(
-                      minHeight: constraints.maxHeight,
-                    ),
-                    child: Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: ErrorMessageWidget(
-                          message: 'Failed to load news: ${error.toString()}',
-                          onRetry:
-                              () => ref.invalidate(
-                                paginatedArticlesProvider(
-                                  widget.teamAbbreviation,
-                                ),
+        loading: () {
+          debugPrint(
+            "[TeamNewsTabContent build loading] Team: ${widget.teamAbbreviation}",
+          );
+          // For initial loading, ensure RefreshIndicator can still work if it's a direct child
+          return Stack(
+            children: [ListView(), const Center(child: LoadingIndicator())],
+          );
+        },
+        error: (error, stackTrace) {
+          debugPrint(
+            "[TeamNewsTabContent build error] Team: ${widget.teamAbbreviation}. Error: $error",
+          );
+          return LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight:
+                        constraints.maxHeight > 0 ? constraints.maxHeight : 200,
+                  ),
+                  child: Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: ErrorMessageWidget(
+                        message: 'Failed to load news: ${error.toString()}',
+                        onRetry:
+                            () => ref.invalidate(
+                              paginatedArticlesProvider(
+                                widget.teamAbbreviation,
                               ),
-                        ),
+                            ),
                       ),
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

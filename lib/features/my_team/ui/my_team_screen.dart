@@ -1,4 +1,3 @@
-// lib/features/my_team/ui/my_team_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart'; // Import team provider
@@ -10,6 +9,10 @@ import 'package:tackle_4_loss/features/teams/ui/widgets/game_day_tab_content.dar
 import 'package:tackle_4_loss/features/teams/ui/widgets/roster_tab_content.dart';
 import 'package:tackle_4_loss/features/teams/ui/widgets/placeholder_content.dart';
 import 'package:tackle_4_loss/features/my_team/ui/widgets/team_huddle_section.dart';
+// --- ADDED IMPORTS ---
+import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart';
+import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
+// --- END ADDED IMPORTS ---
 
 class MyTeamScreen extends ConsumerWidget {
   const MyTeamScreen({super.key});
@@ -58,17 +61,61 @@ class MyTeamScreen extends ConsumerWidget {
             ],
           );
         } else {
-          // --- TeamHuddleSection on top, then tabbed layout below, all scrollable ---
+          // --- A team IS selected, now fetch its news ---
+          final teamNewsAsyncValue = ref.watch(
+            paginatedArticlesProvider(selectedTeamId),
+          );
+
+          // Determine headlineArticle and its ID for exclusion
+          ArticlePreview? headlineArticle;
+          int? headlineArticleIdToExclude;
+
+          teamNewsAsyncValue.whenData((articles) {
+            headlineArticle = articles.isNotEmpty ? articles.first : null;
+            headlineArticleIdToExclude = headlineArticle?.id;
+          });
+
           return SafeArea(
             child: SingleChildScrollView(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TeamHuddleSection(
-                    teamId: selectedTeamId,
-                    headlineArticle:
-                        null, // Optionally fetch headline if needed
+                  // --- Pass fetched article to TeamHuddleSection ---
+                  teamNewsAsyncValue.when(
+                    data: (articles) {
+                      // This assignment is a bit redundant due to the whenData above,
+                      // but ensures headlineArticle is correctly scoped if whenData wasn't used before.
+                      final ArticlePreview? localHeadlineArticle =
+                          articles.isNotEmpty ? articles.first : null;
+                      debugPrint(
+                        "[MyTeamScreen] Fetched ${articles.length} articles for $selectedTeamId. Headline article ID: ${localHeadlineArticle?.id}",
+                      );
+                      return TeamHuddleSection(
+                        teamId: selectedTeamId,
+                        headlineArticle: localHeadlineArticle,
+                      );
+                    },
+                    loading: () {
+                      debugPrint(
+                        "[MyTeamScreen] Loading news for $selectedTeamId for TeamHuddleSection.",
+                      );
+                      return TeamHuddleSection(
+                        teamId: selectedTeamId,
+                        headlineArticle: null,
+                      );
+                    },
+                    error: (error, stack) {
+                      debugPrint(
+                        "[MyTeamScreen] Error fetching headline news for $selectedTeamId: $error",
+                      );
+                      return TeamHuddleSection(
+                        teamId: selectedTeamId,
+                        headlineArticle: null,
+                      );
+                    },
                   ),
+                  // --- End Pass fetched article ---
+
                   // Tabbed content below
                   DefaultTabController(
                     length: 4,
@@ -115,6 +162,9 @@ class MyTeamScreen extends ConsumerWidget {
                             children: [
                               TeamNewsTabContent(
                                 teamAbbreviation: selectedTeamId,
+                                // --- MODIFICATION: Pass the ID to exclude ---
+                                excludeArticleId: headlineArticleIdToExclude,
+                                // --- END MODIFICATION ---
                               ),
                               const PlaceholderContent(title: 'General Info'),
                               GameDayTabContent(
