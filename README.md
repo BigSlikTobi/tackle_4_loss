@@ -28,7 +28,7 @@ This repository contains the Flutter frontend application for Tackle4Loss, an Am
 
 ## Overview
 
-Tackle4Loss aims to provide users with up-to-date American Football news. The main news feed is structured into three distinct sections: a horizontally scrollable "NFL Headlines" (Source 1 news), a "Story Lines" section displaying curated cluster stories in a horizontally scrollable paged grid, and an "Other News" section listing articles from other sources with explicit pagination. Users can select their favorite team and receive push notifications for new, relevant articles. The app also allows users to browse team information, including rosters and injury reports, and dive deep into "Story Lines" with a dedicated detail screen.
+Tackle4Loss aims to provide users with up-to-date American Football news. The main news feed is structured into three distinct sections: a horizontally scrollable "NFL Headlines" (Source 1 news), a "Story Lines" section displaying curated cluster stories as a paginated list (showing 4 items per UI page with a larger backend fetch buffer), and an "Other News" section listing the top 8 articles from other sources with a link to an "All News" screen. Users can select their favorite team and receive push notifications for new, relevant articles. The app also allows users to browse team information, including rosters and injury reports, and dive deep into "Story Lines" with a dedicated detail screen.
 
 This Flutter application serves as the user interface, interacting with a Supabase backend for data storage, retrieval (via Edge Functions), and push notification triggering (via Database Webhooks and Edge Functions). The app is designed to be responsive, adapting its layout for mobile, tablet, and web screens, supports push notifications on iOS, Android, and Web, and provides user settings for customization.
 
@@ -84,7 +84,7 @@ This Flutter application serves as the user interface, interacting with a Supaba
         ```
 4.  **Deploy Supabase Edge Functions:**
     *   Navigate to the `supabase/functions` directory if needed.
-    *   Deploy all functions: `supabase functions deploy`. Ensure functions like `sendPushNotification`, `NFL_news`, `cluster_infos`, `articlePreviews`, `articleDetail`, `teams`, `roster`, `injuries`, `cluster_timeline`, `cluster_summary_by_id`, `coach_view_by_id`, `player_view_by_id`, `franchise_view_by_id`, `team_view_by_id`, and `dynamic_view_by_id` are successfully deployed.
+    *   Deploy all functions: `supabase functions deploy`. Ensure functions like `sendPushNotification`, `NFL_news`, `cluster_infos`, `articlePreviews`, `other_news`, `articleDetail`, `teams`, `roster`, `injuries`, `cluster_timeline`, `cluster_summary_by_id`, `coach_view_by_id`, `player_view_by_id`, `franchise_view_by_id`, `team_view_by_id`, and `dynamic_view_by_id` are successfully deployed.
 5.  **Configure Supabase Database Webhook:**
     *   Set up a Database Webhook in the Supabase Dashboard:
         *   **Name:** `notifyOnNewArticle` (or similar)
@@ -146,12 +146,14 @@ The project follows a **Feature-First** architecture within the `lib` directory:
         *   `widgets/`: Common reusable widgets.
     *   `features/`: Feature modules.
         *   `news_feed/`
-            *   `data/`, `logic/`, `ui/`
+            *   `data/`: Models (`ArticlePreview`, `ClusterInfo`), Service (`NewsFeedService`). (*`news_feed_service_simplified.dart` removed*).
+            *   `logic/`: Riverpod Providers (`nflHeadlinesProvider`, `paginatedArticlesProvider`, `paginatedClusterInfosProvider`). (*`news_feed_provider_simplified.dart` removed*).
+            *   `ui/`: Screen (`NewsFeedScreen`), Widgets (`NflHeadlineItemCard`, `ClusterInfoListItem`, `OtherNewsListItem`, etc.).
         *   `my_team/` 
             *   `data/`, `logic/`, `ui/`
         *   `article_detail/`
             *   `data/`, `logic/`, `ui/`
-        *   `cluster_detail/`  <!-- NEW -->
+        *   `cluster_detail/`
             *   `data/`: Models (`ClusterTimelineEntry`, `ClusterSummaryData`, `SingleViewData`, `DynamicViewsResponse`), Service (`ClusterDetailService`).
             *   `logic/`: Riverpod Providers (`clusterTimelineProvider`, `selectedTimelineEntryProvider`, `clusterSummaryProvider`, `coachViewProvider`, etc., `selectedAdditionalViewProvider`).
             *   `ui/`: Screens (`ClusterDetailScreen`), Widgets (`ClusterTimelineWidget`, `TimelineEntryDialogContent`, `ClusterSummaryWidget`, `AdditionalViewsTabsWidget`, `ViewContentSheet`).
@@ -173,16 +175,74 @@ The project follows a **Feature-First** architecture within the `lib` directory:
     *   `firebase-messaging-sw.js`: Service worker for background web push notifications.
 
 ## Core Technologies & Packages
-*(No major changes here, but ensure all used packages like `flutter_html` are listed if they weren't explicitly before.)*
-*   ... (Existing packages)
-*   **Flutter HTML (`flutter_html`):** Renders HTML content (used in Article Detail & Cluster Detail).
+*   **Flutter & Dart**
+*   **Riverpod:** State management.
+*   **Supabase Flutter (`supabase_flutter`):** Supabase client, authentication, Edge Function calls.
+*   **Firebase Core & Messaging (`firebase_core`, `firebase_messaging`):** Push notifications.
+*   **Shared Preferences (`shared_preferences`):** Local persistence for user preferences (locale, favorite team).
+*   **Flutter DotEnv (`flutter_dotenv`):** Managing environment variables (Supabase keys).
+*   **Cached Network Image (`cached_network_image`):** Efficient image loading and caching.
+*   **URL Launcher (`url_launcher`):** Opening external links.
+*   **Smooth Page Indicator (`smooth_page_indicator`):** Visual indicator for `PageView`.
+*   **Intl (`intl`):** Internationalization and localization (date formatting).
+*   **Flutter HTML (`flutter_html`):** Renders HTML content.
+*   **Share Plus (`share_plus`):** Sharing content.
+*   **Collection (`collection`):** Utility functions for collections (e.g., `groupBy`).
 
 ## Architecture & Key Concepts
-*(No major architectural shifts, but worth noting the new detail screen)*
 
-### Navigation (State-Driven Detail & Pushed Routes) 
-*   ... (Existing description)
-*   `ClusterDetailScreen` is pushed via `Navigator.push` when a "Story Line" item is tapped.
+*   **State Management (Riverpod):**
+    *   Uses `Provider`, `FutureProvider`, `StateProvider`, `StateNotifierProvider`, and `AsyncNotifierProvider` (often with `.family` modifier) for managing application state.
+    *   Providers encapsulate data fetching logic and expose data streams/states to the UI.
+    *   Dependency injection is handled by Riverpod.
+
+*   **Backend Integration (Supabase):**
+    *   Data is fetched from Supabase Edge Functions (e.g., `NFL_news`, `cluster_infos`, `articlePreviews`, `other_news`, `articleDetail`, etc.).
+    *   `NewsFeedService`, `ArticleDetailService`, etc., encapsulate these function calls.
+    *   Realtime updates (currently for logging, UI updates are a TODO) via Supabase Realtime.
+
+*   **Navigation (State-Driven Detail & Pushed Routes):**
+    *   `MainNavigationWrapper` handles primary bottom/side navigation.
+    *   `currentDetailArticleIdProvider` (StateProvider) controls showing `ArticleDetailScreen` overlaying the main content for articles from the news feed.
+    *   Direct `Navigator.push` is used for other screens like `AllNewsScreen`, `SettingsScreen`, `TeamsScreen`, `TeamDetailScreen`, and `ClusterDetailScreen`.
+
+*   **Push Notifications (Firebase + Supabase):**
+    *   FCM tokens are registered with Supabase (`DeviceToken` table), including the user's selected team.
+    *   A Supabase Database Webhook on `NewsArticles` (INSERT) triggers an Edge Function (`sendPushNotification`).
+    *   The Edge Function uses the Firebase Admin SDK (via secrets) to send targeted push notifications to devices subscribed to the relevant team.
+    *   Background and foreground message handling is implemented in the Flutter app.
+
+*   **Theming & Styling:**
+    *   `AppTheme` defines light (and potentially dark) themes.
+    *   `AppColors` centralizes color definitions.
+    *   `GlobalAppBar` provides a consistent app bar, defaulting to an app logo unless a specific title widget is provided.
+
+*   **Data Fetching & Services:**
+    *   Dedicated service classes (e.g., `NewsFeedService`, `TeamService`, `RosterService`, `InjuryService`, `ClusterDetailService`) interact with Supabase Edge Functions.
+    *   Providers use these services to fetch and manage data.
+    *   **NFL Headlines:** Fetched via `getNflHeadlines` and displayed in a `PageView`.
+    *   **Story Lines (Clusters):** Fetched via `paginatedClusterInfosProvider` which uses `NewsFeedService.getClusterInfos`. This provider fetches a larger buffer of items (e.g., 12) from the backend at a time to improve perceived performance for the UI's 4-item-per-page display.
+    *   **Other News (NewsFeedScreen):** The top 8 articles are fetched from the `other_news` Edge Function via `NewsFeedService.getOtherNews` and displayed directly. A "See all News" link navigates to `AllNewsScreen`.
+    *   **All News Screen:** Uses `paginatedArticlesProvider` with a team filter (or null for all teams) to display a fully paginated list of articles from the `articlePreviews` Edge Function.
+
+*   **Localization:**
+    *   Supports English ('en') and German ('de').
+    *   `LocaleProvider` manages the current locale, persisted using `shared_preferences`.
+    *   Uses `GlobalMaterialLocalizations`, `GlobalWidgetsLocalizations`, `GlobalCupertinoLocalizations`.
+
+*   **Local Persistence:**
+    *   `shared_preferences` is used by `PreferenceService` to store the user's selected favorite team ID and by `LocaleProvider` to store the selected language.
+
+*   **Responsiveness:**
+    *   `MainNavigationWrapper` adapts between `BottomNavigationBar` (mobile) and `Drawer` (desktop/tablet) based on `kMobileLayoutBreakpoint`.
+    *   `GlobalAppBar` and other UI elements are designed to be responsive.
+    *   `kMaxContentWidth` constrains content width on larger screens.
+
+*   **HTML Content Rendering:**
+    *   `flutter_html` package is used to render HTML content in `ArticleDetailScreen` and `ClusterDetailScreen` views.
+
+*   **Sharing:**
+    *   `share_plus` package allows sharing article links from `ArticleDetailScreen`.
 
 ## Implemented Features
 
@@ -194,10 +254,10 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   **News Feed (`NewsFeedScreen`):**
     *   Redesigned three-part layout:
         1.  **NFL Headlines:** Horizontally scrollable `PageView` displaying articles from Source 1.
-        2.  **Story Lines:** Horizontally scrollable `PageView`, where each page is a 2x2 grid of `ClusterInfo` objects. Tapping a story navigates to `ClusterDetailScreen`.
-        3.  **Other News:** Vertically listed articles from other sources, with explicit page number navigation.
+        2.  **Story Lines:** Displays `ClusterInfo` objects in a vertically scrollable list, paginated with 4 items per UI page. Fetches a larger buffer of items from the backend to enhance scrolling performance. Tapping a story navigates to `ClusterDetailScreen`.
+        3.  **Other News:** Vertically lists the top 8 articles from the `other_news` Edge Function. Includes a "See all News" link that navigates to the `AllNewsScreen`.
     *   Pull-to-refresh for all sections.
-*   **Cluster Detail Screen (`ClusterDetailScreen`):** <!-- NEW SECTION -->
+*   **Cluster Detail Screen (`ClusterDetailScreen`):** 
     *   Displays detailed information for a selected "Story Line" (cluster).
     *   **Cluster Summary:** Shows a main headline, image (if available), and descriptive content (HTML rendered) for the cluster.
     *   **Interactive Timeline:**
@@ -209,11 +269,11 @@ The project follows a **Feature-First** architecture within the `lib` directory:
         *   Tapping a tab icon fetches data for that specific view from a dedicated Edge Function.
         *   The fetched content (headline and HTML description) is displayed in a modal bottom sheet.
         *   Dynamic tabs adapt their labels based on `available_views` from the backend.
-*   **All News (`AllNewsScreen`):** Unfiltered news feed, pagination, team filter FAB.
+*   **All News (`AllNewsScreen`):** Fully paginated news feed with a team filter FAB, fetching from the `articlePreviews` Edge Function.
 *   **More Options (`MoreOptionsSheetContent`):** Modal bottom sheet for navigation.
-*   **Teams (`TeamsScreen`) & Team Detail (`TeamDetailScreen`):** Display team info, roster, game day (injuries), team-specific news.
+*   **Teams (`TeamsScreen`) & Team Detail (`TeamDetailScreen`):** Display team info, roster, game day (injuries), team-specific news. Roster and Injury tabs are paginated.
 *   **Settings (`SettingsScreen`):** Favorite team and language selection.
-*   **My Team (`MyTeamScreen`):** Displays team-specific information and news.
+*   **My Team (`MyTeamScreen`):** Displays team-specific information and news (news is paginated).
 *   **Article Detail (`ArticleDetailScreen`):** Displays full article content.
 
 ## Running the App
@@ -224,8 +284,8 @@ The project follows a **Feature-First** architecture within the `lib` directory:
 *   Relies on a **Supabase backend** with:
     *   Tables: `NewsArticles`, `Teams`, `DeviceToken`, `Rosters`, `Injuries`, `Player`, `clusters`, `cluster_images`, `cluster_summary`, `cluster_summary_int`, `timelines`, `SourceArticles`, `Source`.
     *   Edge Functions: 
-        *   `NFL_news`, `cluster_infos`, `articlePreviews`, `articleDetail`, `sendPushNotification`, `teams`, `roster`, `injuries`.
-        *   **New for Cluster Detail:** `cluster_timeline` (fetches chronological events for a cluster), `cluster_summary_by_id` (fetches main summary for a cluster), `coach_view_by_id`, `player_view_by_id`, `franchise_view_by_id`, `team_view_by_id`, `dynamic_view_by_id` (provide different perspectives on the cluster story).
+        *   `NFL_news`, `cluster_infos` (supports pagination), `articlePreviews` (supports pagination and team filtering), `other_news` (supports pagination), `articleDetail`, `sendPushNotification`, `teams`, `roster`, `injuries`.
+        *   **For Cluster Detail:** `cluster_timeline` (fetches chronological events for a cluster), `cluster_summary_by_id` (fetches main summary for a cluster), `coach_view_by_id`, `player_view_by_id`, `franchise_view_by_id`, `team_view_by_id`, `dynamic_view_by_id` (provide different perspectives on the cluster story).
     *   Database Webhook for push notifications.
     *   Secrets for Firebase and Supabase.
 *   **RLS policies** control data access.

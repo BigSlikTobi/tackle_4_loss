@@ -1,3 +1,4 @@
+// lib/features/news_feed/data/news_feed_service.dart
 import 'package:flutter/foundation.dart'; // For debugPrint
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
@@ -24,9 +25,9 @@ class NewsFeedService {
     : _supabaseClient = supabaseClient ?? Supabase.instance.client;
 
   Future<List<ArticlePreview>> getNflHeadlines() async {
-    const functionName = 'NFL_news';
+    const String functionName = 'NFL_news'; // Explicitly typed
     debugPrint(
-      "Fetching NFL headlines from Edge Function: $functionName using GET",
+      "[NewsFeedService.getNflHeadlines] Fetching NFL headlines from Edge Function: $functionName using GET",
     );
     try {
       final response = await _supabaseClient.functions.invoke(
@@ -42,12 +43,14 @@ class NewsFeedService {
           errorMessage +=
               ': ${errorData.toString().substring(0, errorData.toString().length > 100 ? 100 : errorData.toString().length)}...';
         }
-        debugPrint('Error response data from $functionName: $errorData');
+        debugPrint(
+          '[NewsFeedService.getNflHeadlines] Error response data from $functionName: $errorData',
+        );
         throw Exception('Failed to load NFL headlines: $errorMessage');
       }
       if (response.data == null || response.data['data'] == null) {
         debugPrint(
-          "Error fetching NFL headlines: Response data or 'data' key is null.",
+          "[NewsFeedService.getNflHeadlines] Error fetching NFL headlines: Response data or 'data' key is null.",
         );
         throw Exception(
           'Failed to load NFL headlines: Received invalid data format.',
@@ -61,23 +64,25 @@ class NewsFeedService {
                   return ArticlePreview.fromJson(json as Map<String, dynamic>);
                 } catch (e) {
                   debugPrint(
-                    "Error parsing NFL headline JSON: $json - Error: $e",
+                    "[NewsFeedService.getNflHeadlines] Error parsing NFL headline JSON: $json - Error: $e",
                   );
                   return null;
                 }
               })
               .whereType<ArticlePreview>()
               .toList();
-      debugPrint("Successfully fetched ${headlines.length} NFL headlines.");
+      debugPrint(
+        "[NewsFeedService.getNflHeadlines] Successfully fetched ${headlines.length} NFL headlines.",
+      );
       return headlines;
     } on FunctionException catch (e) {
       debugPrint(
-        'Supabase FunctionException fetching NFL headlines: ${e.details}',
+        '[NewsFeedService.getNflHeadlines] Supabase FunctionException: ${e.details}',
       );
       final errorMessage = e.details?.toString() ?? e.toString();
       throw Exception('Error invoking $functionName function: $errorMessage');
     } catch (e, stacktrace) {
-      debugPrint('Generic error fetching NFL headlines: $e');
+      debugPrint('[NewsFeedService.getNflHeadlines] Generic error: $e');
       debugPrint('Stacktrace: $stacktrace');
       throw Exception(
         'An unexpected error occurred while fetching NFL headlines.',
@@ -89,28 +94,30 @@ class NewsFeedService {
     int limit = 20,
     int? cursor,
     String? teamId,
-    int? excludeSourceId, // <<< NEW PARAMETER
+    int? excludeSourceId,
   }) async {
+    if (teamId == null) {
+      debugPrint(
+        "[NewsFeedService.getArticlePreviews] WARN: Called with null teamId. This should be handled by getOtherNews. Returning empty for safety.",
+      );
+      return PaginatedArticlesResponse(articles: [], nextCursor: null);
+    }
+
     try {
-      final functionName =
-          'articlePreviews'; // Assuming this is the versatile function
-      final parameters = <String, dynamic>{'limit': limit.toString()};
+      const String functionName = 'articlePreviews'; // Explicitly typed
+      debugPrint(
+        "[NewsFeedService.getArticlePreviews] Fetching for teamId: $teamId, excludeSourceId: $excludeSourceId, limit: $limit, cursor: $cursor from EF: $functionName",
+      );
+      final parameters = <String, dynamic>{
+        'limit': limit.toString(),
+        'teamId': teamId,
+      };
       if (cursor != null) {
         parameters['cursor'] = cursor.toString();
       }
-      if (teamId != null && teamId.isNotEmpty) {
-        parameters['teamId'] = teamId;
-      }
-      // --- PASS excludeSourceId to EF ---
       if (excludeSourceId != null) {
         parameters['excludeSourceId'] = excludeSourceId.toString();
-        debugPrint(
-          "[getArticlePreviews] Requesting with excludeSourceId: $excludeSourceId",
-        );
-      } else {
-        debugPrint("[getArticlePreviews] Requesting without excludeSourceId.");
       }
-      // --- END PASS ---
 
       final response = await _supabaseClient.functions.invoke(
         functionName,
@@ -127,13 +134,17 @@ class NewsFeedService {
           errorMessage +=
               ': ${errorData.toString().substring(0, errorData.toString().length > 100 ? 100 : errorData.toString().length)}...';
         }
-        debugPrint('[getArticlePreviews] Error response data: $errorData');
-        throw Exception('Failed to load article previews: $errorMessage');
+        debugPrint(
+          '[NewsFeedService.getArticlePreviews] Error response data: $errorData',
+        );
+        throw Exception(
+          'Failed to load article previews for team $teamId: $errorMessage',
+        );
       }
 
       if (response.data == null) {
         throw Exception(
-          '[getArticlePreviews] Failed to load article previews: Received null data from function.',
+          '[NewsFeedService.getArticlePreviews] Failed to load article previews for team $teamId: Received null data from function.',
         );
       }
 
@@ -148,7 +159,7 @@ class NewsFeedService {
                   return ArticlePreview.fromJson(json as Map<String, dynamic>);
                 } catch (e) {
                   debugPrint(
-                    "[getArticlePreviews] Error parsing article JSON: $json - Error: $e",
+                    "[NewsFeedService.getArticlePreviews] Error parsing article JSON for team $teamId: $json - Error: $e",
                   );
                   return null;
                 }
@@ -157,7 +168,112 @@ class NewsFeedService {
               .toList();
 
       debugPrint(
-        "[getArticlePreviews] Fetched ${articles.length} articles. ExcludeSrc: $excludeSourceId. Next cursor: $nextCursorInt",
+        "[NewsFeedService.getArticlePreviews] Fetched ${articles.length} articles for team $teamId. ExcludeSrc: $excludeSourceId. Next cursor: $nextCursorInt",
+      );
+      return PaginatedArticlesResponse(
+        articles: articles,
+        nextCursor: nextCursorInt,
+      );
+    } on FunctionException catch (e) {
+      final String functionNameForError =
+          'articlePreviews'; // Define for catch block
+      debugPrint(
+        '[NewsFeedService.getArticlePreviews] Supabase FunctionException for team $teamId: ${e.details}',
+      );
+      final errorMessage = e.details?.toString() ?? e.toString();
+      throw Exception(
+        'Error invoking $functionNameForError function for team $teamId: $errorMessage',
+      );
+    } catch (e, stacktrace) {
+      debugPrint(
+        '[NewsFeedService.getArticlePreviews] Generic error for team $teamId: $e',
+      );
+      debugPrint('Stacktrace: $stacktrace');
+      throw Exception(
+        'An unexpected error occurred while fetching article previews for team $teamId.',
+      );
+    }
+  }
+
+  Future<PaginatedArticlesResponse> getOtherNews({
+    int limit = 20,
+    int? cursor,
+  }) async {
+    // Using final String instead of const String for this specific case,
+    // as a speculative fix for a potential obscure linter issue.
+    final String functionName = 'other_news';
+    debugPrint(
+      "[NewsFeedService.getOtherNews] Fetching limit: $limit, cursor: $cursor from EF: $functionName",
+    );
+    try {
+      final parameters = <String, dynamic>{'limit': limit.toString()};
+      if (cursor != null) {
+        parameters['cursor'] = cursor.toString();
+      }
+
+      final response = await _supabaseClient.functions.invoke(
+        functionName,
+        method: HttpMethod.get,
+        queryParameters: parameters,
+      );
+
+      if (response.status != 200) {
+        var errorData = response.data;
+        String errorMessage = 'Status code ${response.status}';
+        if (errorData is Map && errorData.containsKey('error')) {
+          errorMessage += ': ${errorData['error']}';
+        } else if (errorData != null) {
+          errorMessage +=
+              ': ${errorData.toString().substring(0, errorData.toString().length > 100 ? 100 : errorData.toString().length)}...';
+        }
+        debugPrint(
+          '[NewsFeedService.getOtherNews] Error response data: $errorData',
+        );
+        throw Exception('Failed to load other news: $errorMessage');
+      }
+
+      if (response.data == null) {
+        throw Exception(
+          '[NewsFeedService.getOtherNews] Failed to load other news: Received null data from function.',
+        );
+      }
+
+      List<dynamic> articlesData;
+      int? nextCursorInt;
+
+      if (response.data is Map<String, dynamic>) {
+        final responseData = response.data as Map<String, dynamic>;
+        articlesData = responseData['data'] as List<dynamic>? ?? [];
+        nextCursorInt = responseData['nextCursor'] as int?;
+      } else if (response.data is List<dynamic>) {
+        articlesData = response.data as List<dynamic>;
+        nextCursorInt = null;
+        debugPrint(
+          "[NewsFeedService.getOtherNews] Response was a direct list. Pagination might not be supported by EF: $functionName as is.",
+        );
+      } else {
+        throw Exception(
+          "[NewsFeedService.getOtherNews] Unexpected data format from $functionName.",
+        );
+      }
+
+      final articles =
+          articlesData
+              .map((json) {
+                try {
+                  return ArticlePreview.fromJson(json as Map<String, dynamic>);
+                } catch (e) {
+                  debugPrint(
+                    "[NewsFeedService.getOtherNews] Error parsing article JSON: $json - Error: $e",
+                  );
+                  return null;
+                }
+              })
+              .whereType<ArticlePreview>()
+              .toList();
+
+      debugPrint(
+        "[NewsFeedService.getOtherNews] Fetched ${articles.length} articles. Next cursor: $nextCursorInt",
       );
       return PaginatedArticlesResponse(
         articles: articles,
@@ -165,26 +281,26 @@ class NewsFeedService {
       );
     } on FunctionException catch (e) {
       debugPrint(
-        '[getArticlePreviews] Supabase FunctionException: ${e.details}',
+        '[NewsFeedService.getOtherNews] Supabase FunctionException: ${e.details}',
       );
       final errorMessage = e.details?.toString() ?? e.toString();
-      throw Exception('Error invoking articlePreviews function: $errorMessage');
+      throw Exception('Error invoking $functionName function: $errorMessage');
     } catch (e, stacktrace) {
-      debugPrint('[getArticlePreviews] Generic error: $e');
+      debugPrint('[NewsFeedService.getOtherNews] Generic error: $e');
       debugPrint('Stacktrace: $stacktrace');
       throw Exception(
-        'An unexpected error occurred while fetching article previews.',
+        'An unexpected error occurred while fetching other news.',
       );
     }
   }
 
   Future<PaginatedClusterInfosResponse> getClusterInfos({
-    int limit = 10,
+    int limit = 50,
     String? cursor,
   }) async {
-    const functionName = 'cluster_infos';
+    const String functionName = 'cluster_infos'; // Explicitly typed
     debugPrint(
-      "Fetching cluster infos from $functionName ${cursor != null ? 'after cursor "$cursor"' : ''} (limit $limit)...",
+      "[NewsFeedService.getClusterInfos] Fetching cluster infos from $functionName ${cursor != null ? 'after cursor "${cursor}"' : ''} (limit $limit)...",
     );
     try {
       final parameters = <String, String>{'limit': limit.toString()};
@@ -205,7 +321,7 @@ class NewsFeedService {
           errorMessage += ': ${errorData['error']}';
         } else if (errorData != null) {
           errorMessage +=
-              ': ${errorData.toString().substring(0, errorData.toString().length > 100 ? 100 : response.data.toString().length)}...';
+              ': ${errorData.toString().substring(0, errorData.toString().length > 100 ? 100 : errorData.toString().length)}...';
         }
         debugPrint('Error response data from $functionName: $errorData');
         throw Exception('Failed to load cluster infos: $errorMessage');
@@ -232,28 +348,11 @@ class NewsFeedService {
       List<ClusterInfo> clusterInfos = [];
       for (var jsonItem in clustersData) {
         if (jsonItem is Map<String, dynamic>) {
-          final String? rawHeadline = jsonItem['headline'] as String?;
-          final String? rawHeadlineDe = jsonItem['headline_de'] as String?;
-          bool hasEnglishHeadline =
-              rawHeadline != null &&
-              rawHeadline.trim().replaceAll(RegExp(r'<[^>]*>'), '').isNotEmpty;
-          bool hasGermanHeadline =
-              rawHeadlineDe != null &&
-              rawHeadlineDe
-                  .trim()
-                  .replaceAll(RegExp(r'<[^>]*>'), '')
-                  .isNotEmpty;
-          if (hasEnglishHeadline || hasGermanHeadline) {
-            try {
-              clusterInfos.add(ClusterInfo.fromJson(jsonItem));
-            } catch (e, s) {
-              debugPrint(
-                "Error parsing cluster info JSON: $jsonItem - Error: $e\nStackTrace: $s",
-              );
-            }
-          } else {
+          try {
+            clusterInfos.add(ClusterInfo.fromJson(jsonItem));
+          } catch (e, s) {
             debugPrint(
-              "Filtered out cluster with no valid headline: ${jsonItem['clusterId']}",
+              "Error parsing cluster info JSON: $jsonItem - Error: $e\nStackTrace: $s",
             );
           }
         } else {
@@ -264,7 +363,7 @@ class NewsFeedService {
       }
 
       debugPrint(
-        "Fetched ${clustersData.length} raw clusters, Filtered to ${clusterInfos.length} cluster infos. Next cursor: $nextCursor",
+        "[NewsFeedService.getClusterInfos] Fetched ${clustersData.length} clusters. Next cursor: $nextCursor",
       );
 
       return PaginatedClusterInfosResponse(
@@ -272,15 +371,53 @@ class NewsFeedService {
         nextCursor: nextCursor,
       );
     } on FunctionException catch (e) {
-      debugPrint('Supabase FunctionException for $functionName: ${e.details}');
+      final String functionNameForError =
+          'cluster_infos'; // Define for catch block
+      debugPrint(
+        'Supabase FunctionException for $functionNameForError: ${e.details}',
+      );
       final errorMessage = e.details?.toString() ?? e.toString();
-      throw Exception('Error invoking $functionName function: $errorMessage');
+      throw Exception(
+        'Error invoking $functionNameForError function: $errorMessage',
+      );
     } catch (e, stacktrace) {
       debugPrint('Generic error fetching cluster infos: $e');
       debugPrint('Stacktrace: $stacktrace');
       throw Exception(
         'An unexpected error occurred while fetching cluster infos.',
       );
+    }
+  }
+
+  Future<List<ClusterInfo>> getAllClusterInfos({int limit = 60}) async {
+    debugPrint(
+      "[NewsFeedService.getAllClusterInfos] Starting to fetch all cluster infos, page limit per call: $limit",
+    );
+    List<ClusterInfo> allClusters = [];
+    String? cursor;
+    int pageCount = 0;
+    try {
+      do {
+        pageCount++;
+        debugPrint(
+          "[NewsFeedService.getAllClusterInfos] Fetching page $pageCount with cursor: $cursor",
+        );
+        final response = await getClusterInfos(limit: limit, cursor: cursor);
+        allClusters.addAll(response.clusters);
+        cursor = response.nextCursor;
+        debugPrint(
+          '[NewsFeedService.getAllClusterInfos] Page $pageCount fetched ${response.clusters.length} clusters. Total fetched: ${allClusters.length}. Next cursor: $cursor',
+        );
+      } while (cursor != null && cursor.isNotEmpty);
+      debugPrint(
+        "[NewsFeedService.getAllClusterInfos] Finished fetching all clusters. Total: ${allClusters.length} across $pageCount pages.",
+      );
+      return allClusters;
+    } catch (e, stacktrace) {
+      debugPrint(
+        "[NewsFeedService.getAllClusterInfos] Error during multi-page fetch: $e\nStacktrace: $stacktrace",
+      );
+      throw Exception('Failed to fetch all cluster infos: $e');
     }
   }
 }

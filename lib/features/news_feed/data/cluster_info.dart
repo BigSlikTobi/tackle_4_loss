@@ -11,15 +11,6 @@ class ClusterInfo {
   final String? headlineDe; // German headline
   final String? contentDe; // German content/summary
 
-  // --- TODO: Navigation from Cluster ---
-  // We need a way to get an article ID or a representative link
-  // if tapping a cluster should lead to a detail view.
-  // For now, this model doesn't have a direct article ID.
-  // Options:
-  // 1. Backend adds a representative_article_id to cluster_infos response.
-  // 2. A separate lookup is needed if clusterId can map to an article.
-  // 3. Tapping a cluster opens a dedicated "cluster detail" screen (new feature).
-
   const ClusterInfo({
     required this.clusterId,
     required this.updatedAtString,
@@ -91,11 +82,6 @@ class ClusterInfo {
   // primaryImageUrl uses the single imageUrl field
   String? get primaryImageUrl => imageUrl;
 
-  // --- TODO: Decide on Article ID for Navigation ---
-  // This is a placeholder. If a cluster directly maps to an article,
-  // or if the backend can provide a representative article_id, this would be it.
-  // Otherwise, tapping a cluster might not navigate to an ArticleDetailScreen
-  // without further changes.
   int? get representativeArticleIdForNavigation {
     // Example: If clusterId could be parsed or looked up.
     // For now, returning null as we don't have this from the EF.
