@@ -1,3 +1,4 @@
+// lib/features/news_feed/logic/news_feed_provider.dart
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -10,14 +11,13 @@ final newsFeedDisplayModeProvider = StateProvider<NewsFeedDisplayMode>(
   (ref) => NewsFeedDisplayMode.all,
 );
 
-final storyLinesPageIndexProvider = StateProvider<int>((ref) => 0);
+final storyLinesCurrentPageProvider = StateProvider<int>((ref) => 1);
+const int storyLinesPerPage = 4;
+const int storyLinesBackendFetchLimit = storyLinesPerPage * 3;
+
 final nflHeadlinesPageIndexProvider = StateProvider<int>((ref) => 0);
 
-const int otherNewsItemsPerPage = 8;
-final otherNewsCurrentPageProvider = StateProvider<int>((ref) => 1);
-
-// --- Define Source ID for NFL News to be excluded from "Other News" ---
-const int nflSourceIdForExclusion = 1;
+const int newsItemsPerPage = 8;
 
 final newsFeedServiceProvider = Provider<NewsFeedService>((ref) {
   return NewsFeedService();
@@ -25,52 +25,71 @@ final newsFeedServiceProvider = Provider<NewsFeedService>((ref) {
 
 final nflHeadlinesProvider = FutureProvider<List<ArticlePreview>>((ref) async {
   final service = ref.watch(newsFeedServiceProvider);
-  return service.getNflHeadlines();
+  debugPrint("[nflHeadlinesProvider] Fetching NFL headlines.");
+  try {
+    final headlines = await service.getNflHeadlines();
+    debugPrint(
+      "[nflHeadlinesProvider] Successfully fetched ${headlines.length} NFL headlines.",
+    );
+    return headlines;
+  } catch (e, stack) {
+    debugPrint(
+      "[nflHeadlinesProvider] Error fetching NFL headlines: $e\n$stack",
+    );
+    rethrow;
+  }
 });
 
-// paginatedArticlesProvider(null) will be used for "Other News"
-// paginatedArticlesProvider(teamId) will be used for team-specific news
 final paginatedArticlesProvider = AsyncNotifierProvider.family<
   PaginatedArticlesNotifier,
   List<ArticlePreview>,
-  String? // Nullable String for teamId filter (null means general/other news)
+  String?
 >(() => PaginatedArticlesNotifier());
 
 class PaginatedArticlesNotifier
     extends FamilyAsyncNotifier<List<ArticlePreview>, String?> {
   int? _nextCursor;
   bool _isLoadingMore = false;
-  bool _hasMore = true;
+  bool _hasMore =
+      true; // Initialize optimistically, will be corrected by first fetch
   List<ArticlePreview> _allFetchedArticles = [];
   final Set<int> _seenArticleIds = <int>{};
-  String? get _teamIdFilter => arg; // Access family parameter (teamId)
+  String? get _teamIdFilter => arg;
 
   @override
   Future<List<ArticlePreview>> build(String? teamId) async {
-    // Parameter is teamId
     final service = ref.watch(newsFeedServiceProvider);
     _nextCursor = null;
-    _hasMore = true;
-    _isLoadingMore = false;
+    // _hasMore will be determined by the first fetch response
+    _isLoadingMore = false; // Initial build is not "loading more"
     _allFetchedArticles = [];
     _seenArticleIds.clear();
+    debugLog("Build started.");
     try {
-      // Initial fetch for this notifier. For "Other News", fetch a couple of pages worth.
-      // For team-specific news, initial fetch might be smaller or same.
-      final initialLimit =
-          (_teamIdFilter == null)
-              ? otherNewsItemsPerPage * 2
-              : otherNewsItemsPerPage;
-      debugPrint(
-        "PaginatedArticlesNotifier build (TeamId: $_teamIdFilter): Fetching initial page (limit: $initialLimit)...",
-      );
+      final initialLimit = (_teamIdFilter == null) ? 8 : newsItemsPerPage * 2;
+      debugLog("Fetching initial page (limit: $initialLimit)...");
 
-      final response = await service.getArticlePreviews(
-        limit: initialLimit,
-        teamId: _teamIdFilter,
-        // If no team filter, assume it's for "Other News" and exclude NFL Source
-        excludeSourceId: _teamIdFilter == null ? nflSourceIdForExclusion : null,
-      );
+      PaginatedArticlesResponse response;
+      if (_teamIdFilter == null) {
+        debugLog(
+          "Calling service.getOtherNews for initial fetch (limit: $initialLimit).",
+        );
+        response = await service.getOtherNews(limit: initialLimit);
+        _hasMore =
+            false; // "Other News" on main feed is always just the top 8, no further pagination.
+        _nextCursor = null;
+      } else {
+        debugLog(
+          "Calling service.getArticlePreviews for team '$_teamIdFilter' initial fetch (limit: $initialLimit).",
+        );
+        response = await service.getArticlePreviews(
+          limit: initialLimit,
+          teamId: _teamIdFilter,
+        );
+        _nextCursor = response.nextCursor;
+        // _hasMore is true if a next cursor is provided AND the response was not empty.
+        _hasMore = _nextCursor != null && response.articles.isNotEmpty;
+      }
 
       final uniqueInitialArticles =
           response.articles.where((article) {
@@ -78,44 +97,58 @@ class PaginatedArticlesNotifier
           }).toList();
       _allFetchedArticles = uniqueInitialArticles;
 
-      _nextCursor = response.nextCursor;
-      _hasMore = _nextCursor != null;
-      debugPrint(
-        "PaginatedArticlesNotifier build (TeamId: $_teamIdFilter): Fetched ${response.articles.length} (unique: ${_allFetchedArticles.length}) articles. Next cursor: $_nextCursor HasMore: $_hasMore",
+      if (_teamIdFilter == null && _allFetchedArticles.length > 8) {
+        _allFetchedArticles = _allFetchedArticles.sublist(0, 8);
+        debugLog("Trimmed 'Other News' to 8 articles.");
+      }
+
+      debugLog(
+        "Fetched ${response.articles.length} (unique & potentially trimmed: ${_allFetchedArticles.length}) articles. Next cursor (for teams): $_nextCursor. HasMore: $_hasMore",
       );
       return _allFetchedArticles;
     } catch (e, stack) {
-      debugPrint(
-        "Error in PaginatedArticlesNotifier build (TeamId: $_teamIdFilter): $e\n$stack",
-      );
-      _hasMore = false;
+      debugLog("Error in build: $e\n$stack");
+      _hasMore = false; // Ensure _hasMore is false on error
       throw Exception(
-        "Failed to load initial articles for filter $_teamIdFilter: $e",
+        "Failed to load initial articles for filter '$_teamIdFilter': $e",
       );
     }
   }
 
   Future<void> fetchNextPage() async {
-    if (_isLoadingMore || !_hasMore || _nextCursor == null) {
-      debugPrint(
-        "fetchNextPage skipped (PaginatedArticlesNotifier TeamId: $_teamIdFilter): loading=$_isLoadingMore, hasMore=$_hasMore, cursor=$_nextCursor",
+    if (_teamIdFilter == null) {
+      debugLog(
+        "fetchNextPage skipped: 'Other News' section is not paginated here.",
       );
       return;
     }
-    debugPrint(
-      "Fetching next page (PaginatedArticlesNotifier TeamId: $_teamIdFilter) with cursor: $_nextCursor",
+
+    // Corrected condition: if _nextCursor is null, we definitely can't fetch.
+    if (_isLoadingMore || !_hasMore || _nextCursor == null) {
+      debugLog(
+        "fetchNextPage skipped (team '$_teamIdFilter'): loading=$_isLoadingMore, hasMore=$_hasMore, cursor=$_nextCursor",
+      );
+      return;
+    }
+    debugLog(
+      "Fetching next page for team '$_teamIdFilter' with cursor: $_nextCursor",
     );
     _isLoadingMore = true;
+    state = AsyncData(
+      _allFetchedArticles,
+    ); // Reflect loading while showing current data
 
     final service = ref.read(newsFeedServiceProvider);
-    final currentCursor = _nextCursor;
+    final currentCursor =
+        _nextCursor; // Already confirmed non-null by the check above
     try {
-      final response = await service.getArticlePreviews(
+      debugLog(
+        "Calling service.getArticlePreviews for team '$_teamIdFilter' next page fetch.",
+      );
+      PaginatedArticlesResponse response = await service.getArticlePreviews(
         cursor: currentCursor,
-        limit:
-            otherNewsItemsPerPage, // Standard fetch size for subsequent pages
+        limit: newsItemsPerPage,
         teamId: _teamIdFilter,
-        excludeSourceId: _teamIdFilter == null ? nflSourceIdForExclusion : null,
       );
 
       int newUniqueCount = 0;
@@ -132,46 +165,59 @@ class PaginatedArticlesNotifier
       }
 
       _nextCursor = response.nextCursor;
-      if (newUniqueCount == 0 && (_nextCursor == null)) {
-        _hasMore = false;
-      } else {
-        _hasMore = _nextCursor != null;
-      }
+      _hasMore = _nextCursor != null && response.articles.isNotEmpty;
 
-      debugPrint(
-        "Next page fetched (PaginatedArticlesNotifier TeamId: $_teamIdFilter). Fetched ${response.articles.length} (new unique: $newUniqueCount). Total unique: ${_allFetchedArticles.length}. Has more: $_hasMore",
+      debugLog(
+        "Next page fetched for team '$_teamIdFilter'. Fetched ${response.articles.length} (new unique: $newUniqueCount). Total unique: ${_allFetchedArticles.length}. Has more: $_hasMore. New cursor: $_nextCursor",
       );
       state = AsyncData<List<ArticlePreview>>(_allFetchedArticles);
     } catch (e, stack) {
-      debugPrint(
-        "Error fetching next page (PaginatedArticlesNotifier TeamId: $_teamIdFilter) after cursor $currentCursor: $e\n$stack",
+      debugLog(
+        "Error fetching next page for team '$_teamIdFilter' after cursor $currentCursor: $e\n$stack",
       );
+      _hasMore = false; // Stop trying on error
       state = AsyncError<List<ArticlePreview>>(
         e,
         stack,
       ).copyWithPrevious(AsyncData(_allFetchedArticles));
-      _hasMore = false;
     } finally {
       _isLoadingMore = false;
     }
   }
 
   Future<void> ensureDataForPage(int pageNumber) async {
-    final itemsNeeded = pageNumber * otherNewsItemsPerPage;
-    debugPrint(
-      "[PaginatedArticlesNotifier TeamId: $_teamIdFilter] Ensuring data for page $pageNumber. Items needed: $itemsNeeded. Currently have: ${_allFetchedArticles.length}. HasMore: $_hasMore",
+    if (_teamIdFilter == null) {
+      debugLog(
+        "'ensureDataForPage' called for 'Other News', but it's not paginated here. Skipping.",
+      );
+      return;
+    }
+
+    final itemsNeeded = pageNumber * newsItemsPerPage;
+    debugLog(
+      "Ensuring data for page $pageNumber. Items needed: $itemsNeeded. Currently have: ${_allFetchedArticles.length}. HasMore: $_hasMore. IsLoadingMore: $_isLoadingMore",
     );
+    // Check _nextCursor as well; if it's null and we don't have enough, we can't fetch more.
     while (_allFetchedArticles.length < itemsNeeded &&
         _hasMore &&
-        !_isLoadingMore) {
-      debugPrint(
-        "[PaginatedArticlesNotifier TeamId: $_teamIdFilter] Not enough data for page $pageNumber. Fetching next page...",
+        !_isLoadingMore &&
+        _nextCursor != null) {
+      debugLog(
+        "Not enough data for page $pageNumber (need $itemsNeeded, have ${_allFetchedArticles.length}). Fetching next page for team '$_teamIdFilter'...",
       );
       await fetchNextPage();
     }
-    debugPrint(
-      "[PaginatedArticlesNotifier TeamId: $_teamIdFilter] Finished ensuring data for page $pageNumber. Total items: ${_allFetchedArticles.length}",
+    debugLog(
+      "Finished ensuring data for page $pageNumber (team '$_teamIdFilter'). Total items: ${_allFetchedArticles.length}. HasMore: $_hasMore",
     );
+  }
+
+  void debugLog(String message) {
+    String filterContext =
+        _teamIdFilter == null
+            ? "General (Other News - Top 8)"
+            : "Team '$_teamIdFilter'";
+    debugPrint("[PaginatedArticlesNotifier ($filterContext)] $message");
   }
 
   bool get isLoadingMore => _isLoadingMore;
@@ -179,15 +225,16 @@ class PaginatedArticlesNotifier
   int get totalFetchedItems => _allFetchedArticles.length;
 }
 
-final clusterInfosProvider =
-    AsyncNotifierProvider<ClusterInfosNotifier, List<ClusterInfo>>(
-      () => ClusterInfosNotifier(),
+// --- ClusterInfo Section - Paginated ---
+final paginatedClusterInfosProvider =
+    AsyncNotifierProvider<PaginatedClusterInfosNotifier, List<ClusterInfo>>(
+      () => PaginatedClusterInfosNotifier(),
     );
 
-class ClusterInfosNotifier extends AsyncNotifier<List<ClusterInfo>> {
+class PaginatedClusterInfosNotifier extends AsyncNotifier<List<ClusterInfo>> {
   String? _nextCursor;
   bool _isLoadingMore = false;
-  bool _hasMore = true;
+  bool _hasMore = true; // Start optimistic, will be corrected by first fetch
   List<ClusterInfo> _allFetchedClusters = [];
   final Set<String> _seenClusterIds = <String>{};
 
@@ -195,14 +242,17 @@ class ClusterInfosNotifier extends AsyncNotifier<List<ClusterInfo>> {
   Future<List<ClusterInfo>> build() async {
     final service = ref.watch(newsFeedServiceProvider);
     _nextCursor = null;
-    _hasMore = true;
     _isLoadingMore = false;
     _allFetchedClusters = [];
     _seenClusterIds.clear();
-    debugPrint("ClusterInfosNotifier build: Fetching initial page...");
+    debugPrint(
+      "[PaginatedClusterInfosNotifier] Build started. Fetching initial batch (limit: $storyLinesBackendFetchLimit)...",
+    );
 
     try {
-      final response = await service.getClusterInfos(limit: 10);
+      final response = await service.getClusterInfos(
+        limit: storyLinesBackendFetchLimit,
+      );
 
       final uniqueInitialClusters =
           response.clusters.where((cluster) {
@@ -211,40 +261,37 @@ class ClusterInfosNotifier extends AsyncNotifier<List<ClusterInfo>> {
       _allFetchedClusters = uniqueInitialClusters;
 
       _nextCursor = response.nextCursor;
-      _hasMore = _nextCursor != null && _nextCursor!.isNotEmpty;
-
+      _hasMore = _nextCursor != null && response.clusters.isNotEmpty;
       debugPrint(
-        "ClusterInfosNotifier build: Fetched ${response.clusters.length} (unique: ${_allFetchedClusters.length}) clusters. Next cursor: $_nextCursor, Has more: $_hasMore",
+        "[PaginatedClusterInfosNotifier] Initial fetch complete. Fetched ${response.clusters.length} (unique: ${_allFetchedClusters.length}). Next cursor: '$_nextCursor'. HasMore: $_hasMore",
       );
       return _allFetchedClusters;
     } catch (e, stack) {
-      debugPrint("Error in ClusterInfosNotifier build: $e\n$stack");
+      debugPrint("[PaginatedClusterInfosNotifier] Error in build: $e\n$stack");
       _hasMore = false;
-      throw Exception("Failed to load initial cluster infos: $e");
+      throw Exception("Failed to load initial story lines: $e");
     }
   }
 
   Future<void> fetchNextPage() async {
-    if (_isLoadingMore ||
-        !_hasMore ||
-        _nextCursor == null ||
-        _nextCursor!.isEmpty) {
+    if (_isLoadingMore || !_hasMore || _nextCursor == null) {
       debugPrint(
-        "fetchNextPage skipped (ClusterInfosNotifier): loading=$_isLoadingMore, hasMore=$_hasMore, cursor='$_nextCursor'",
+        "[PaginatedClusterInfosNotifier] fetchNextPage skipped: loading=$_isLoadingMore, hasMore=$_hasMore, cursor=$_nextCursor",
       );
       return;
     }
     debugPrint(
-      "Fetching next page (ClusterInfosNotifier) with cursor: $_nextCursor",
+      "[PaginatedClusterInfosNotifier] Fetching next page with cursor: '$_nextCursor' (fetch limit: $storyLinesBackendFetchLimit)",
     );
     _isLoadingMore = true;
-    final service = ref.read(newsFeedServiceProvider);
-    final currentBackendCursor = _nextCursor;
+    state = AsyncData(_allFetchedClusters);
 
+    final service = ref.read(newsFeedServiceProvider);
+    final currentCursor = _nextCursor; // Already confirmed non-null
     try {
       final response = await service.getClusterInfos(
-        cursor: currentBackendCursor,
-        limit: 10,
+        cursor: currentCursor,
+        limit: storyLinesBackendFetchLimit,
       );
 
       int newUniqueCount = 0;
@@ -261,31 +308,48 @@ class ClusterInfosNotifier extends AsyncNotifier<List<ClusterInfo>> {
       }
 
       _nextCursor = response.nextCursor;
-      if (newUniqueCount == 0 &&
-          (_nextCursor == null || _nextCursor!.isEmpty)) {
-        _hasMore = false;
-      } else {
-        _hasMore = _nextCursor != null && _nextCursor!.isNotEmpty;
-      }
+      _hasMore = _nextCursor != null && response.clusters.isNotEmpty;
 
       debugPrint(
-        "Next page fetched (ClusterInfosNotifier). Fetched ${response.clusters.length} (new unique: $newUniqueCount). Total unique: ${_allFetchedClusters.length}. New cursor: $_nextCursor, Has more: $_hasMore",
+        "[PaginatedClusterInfosNotifier] Next page fetched. Fetched ${response.clusters.length} (new unique: $newUniqueCount). Total unique: ${_allFetchedClusters.length}. Has more: $_hasMore. New cursor: '$_nextCursor'",
       );
       state = AsyncData<List<ClusterInfo>>(_allFetchedClusters);
     } catch (e, stack) {
       debugPrint(
-        "Error fetching next page (ClusterInfosNotifier) after cursor $currentBackendCursor: $e\n$stack",
+        "[PaginatedClusterInfosNotifier] Error fetching next page after cursor $currentCursor: $e\n$stack",
       );
+      _hasMore = false;
       state = AsyncError<List<ClusterInfo>>(
         e,
         stack,
       ).copyWithPrevious(AsyncData(_allFetchedClusters));
-      _hasMore = false;
     } finally {
       _isLoadingMore = false;
     }
   }
 
+  Future<void> ensureDataForStoryLinesPage(int uiPageNumber) async {
+    final itemsNeededForUi = uiPageNumber * storyLinesPerPage;
+    debugPrint(
+      "[PaginatedClusterInfosNotifier] Ensuring data for Story Lines UI page $uiPageNumber. Items needed for UI: $itemsNeededForUi. Currently have in buffer: ${_allFetchedClusters.length}. HasMore from backend: $_hasMore. IsLoadingMore: $_isLoadingMore. NextCursor: '$_nextCursor'",
+    );
+
+    // Loop to fetch pages until enough items are loaded for the target UI page OR no more data from backend
+    while (_allFetchedClusters.length < itemsNeededForUi &&
+        _hasMore &&
+        !_isLoadingMore &&
+        _nextCursor != null) {
+      debugPrint(
+        "[PaginatedClusterInfosNotifier] Not enough data in buffer for UI page $uiPageNumber (need $itemsNeededForUi, have ${_allFetchedClusters.length}). Fetching next backend page using cursor '$_nextCursor'...",
+      );
+      await fetchNextPage();
+    }
+    debugPrint(
+      "[PaginatedClusterInfosNotifier] Finished ensuring data for Story Lines UI page $uiPageNumber. Total items in buffer: ${_allFetchedClusters.length}. HasMore: $_hasMore",
+    );
+  }
+
   bool get isLoadingMore => _isLoadingMore;
-  bool get hasMore => _hasMore;
+  bool get hasMoreData => _hasMore;
+  int get totalFetchedClusterItems => _allFetchedClusters.length;
 }

@@ -1,4 +1,4 @@
-// File: lib/features/cluster_detail/ui/widgets/additional_views_tabs_widget.dart
+// lib/features/cluster_detail/ui/widgets/additional_views_tabs_widget.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/features/cluster_detail/logic/cluster_detail_provider.dart';
@@ -28,8 +28,15 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
           );
           final currentType = ref.read(selectedAdditionalViewProvider);
 
+          debugPrint(
+            "[AdditionalViewsTabsWidget._buildTab] Tapped tab: $label (type: $type). Current selected type: $currentType",
+          );
+
           if (currentType != type) {
             selectedNotifier.state = type;
+            debugPrint(
+              "[AdditionalViewsTabsWidget._buildTab] Changed selectedAdditionalViewProvider to: $type",
+            );
           }
           _showViewContentSheet(context, ref, type, clusterId);
         },
@@ -67,6 +74,9 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
     AdditionalViewType viewType,
     String clusterId,
   ) {
+    debugPrint(
+      "[_showViewContentSheet] Attempting to show sheet for viewType: $viewType, clusterId: $clusterId",
+    );
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -83,6 +93,13 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
                 final asyncData = consumerRef.watch(
                   currentViewDataProvider(clusterId),
                 );
+                final currentSelectedTabType = consumerRef.read(
+                  selectedAdditionalViewProvider,
+                );
+
+                debugPrint(
+                  "[_showViewContentSheet Draggable.builder] Rebuilding sheet content. Selected tab type: $currentSelectedTabType. AsyncData state for currentViewDataProvider: $asyncData",
+                );
 
                 return Container(
                   decoration: BoxDecoration(
@@ -92,7 +109,7 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withAlpha(38), // 0.15 * 255 ≈ 38
+                        color: Colors.black.withAlpha(38),
                         blurRadius: 10.0,
                         spreadRadius: 2.0,
                       ),
@@ -100,29 +117,42 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
                   ),
                   child: asyncData.when(
                     data: (viewData) {
+                      debugPrint(
+                        "[_showViewContentSheet Draggable.builder data] Received viewData: ${viewData != null ? 'Instance of SingleViewData for view: ${viewData.viewName}' : 'null'}",
+                      );
                       if (viewData == null) {
-                        final currentSelectedTabType = ref.read(
-                          selectedAdditionalViewProvider,
-                        );
                         String msg = "Content for this view is not available.";
                         if (currentSelectedTabType ==
                                 AdditionalViewType.dynamic1 ||
                             currentSelectedTabType ==
                                 AdditionalViewType.dynamic2) {
-                          final dynamicState = ref.read(
+                          final dynamicState = consumerRef.read(
                             dynamicViewsProvider(clusterId),
                           );
                           dynamicState.whenData((dynamicResponseData) {
+                            final viewsAvailable =
+                                dynamicResponseData.availableViews;
+                            debugPrint(
+                              "Dynamic views available from backend: $viewsAvailable. Current tab: $currentSelectedTabType",
+                            );
                             if (dynamicResponseData.views.isEmpty ||
                                 (currentSelectedTabType ==
                                         AdditionalViewType.dynamic2 &&
                                     dynamicResponseData.views.length < 2)) {
                               msg =
-                                  "This dynamic view is not available for this story.";
+                                  "This dynamic view ('${currentSelectedTabType == AdditionalViewType.dynamic1
+                                      ? viewsAvailable.isNotEmpty
+                                          ? viewsAvailable[0]
+                                          : 'Dynamic 1'
+                                      : viewsAvailable.length > 1
+                                      ? viewsAvailable[1]
+                                      : 'Dynamic 2'}') is not available for this story.";
                             }
                           });
                         }
-
+                        debugPrint(
+                          "[_showViewContentSheet Draggable.builder data] viewData is null. Displaying message: '$msg'",
+                        );
                         return _buildEmptyOrErrorContent(
                           scrollController,
                           msg,
@@ -135,12 +165,19 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
                         scrollController: scrollController,
                       );
                     },
-                    loading:
-                        () => _buildLoadingContent(
-                          scrollController,
-                          sheetContext,
-                        ),
+                    loading: () {
+                      debugPrint(
+                        "[_showViewContentSheet Draggable.builder loading] currentViewDataProvider is loading for clusterId: $clusterId, viewType: $currentSelectedTabType",
+                      );
+                      return _buildLoadingContent(
+                        scrollController,
+                        sheetContext,
+                      );
+                    },
                     error: (error, stackTrace) {
+                      debugPrint(
+                        "[_showViewContentSheet Draggable.builder error] Error loading view for $currentSelectedTabType: $error\n$stackTrace",
+                      );
                       return _buildEmptyOrErrorContent(
                         scrollController,
                         "Error loading view: ${error.toString().split(':').first.trim()}",
@@ -148,20 +185,30 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
                           Navigator.pop(sheetContext);
                           switch (viewType) {
                             case AdditionalViewType.coach:
-                              ref.invalidate(coachViewProvider(clusterId));
+                              consumerRef.invalidate(
+                                coachViewProvider(clusterId),
+                              );
                               break;
                             case AdditionalViewType.player:
-                              ref.invalidate(playerViewProvider(clusterId));
+                              consumerRef.invalidate(
+                                playerViewProvider(clusterId),
+                              );
                               break;
                             case AdditionalViewType.franchise:
-                              ref.invalidate(franchiseViewProvider(clusterId));
+                              consumerRef.invalidate(
+                                franchiseViewProvider(clusterId),
+                              );
                               break;
                             case AdditionalViewType.team:
-                              ref.invalidate(teamViewProvider(clusterId));
+                              consumerRef.invalidate(
+                                teamViewProvider(clusterId),
+                              );
                               break;
                             case AdditionalViewType.dynamic1:
                             case AdditionalViewType.dynamic2:
-                              ref.invalidate(dynamicViewsProvider(clusterId));
+                              consumerRef.invalidate(
+                                dynamicViewsProvider(clusterId),
+                              );
                               break;
                             case AdditionalViewType.none:
                               break;
@@ -200,7 +247,7 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
             ),
           ),
         ),
-        Expanded(child: const Center(child: LoadingIndicator())),
+        const Expanded(child: Center(child: LoadingIndicator())),
       ],
     );
   }
@@ -252,33 +299,51 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
 
     bool showDynamic1 = false;
     bool showDynamic2 = false;
-    String dynamic1Label = "Dynamic";
-    String dynamic2Label = "Insight";
+    String dynamic1Label = "Dynamic"; // Default label
+    String dynamic2Label = "Insight"; // Default label
 
+    // Correctly use .whenData to access the data part of AsyncValue
     dynamicViewsState.whenData((data) {
       final available = data.availableViews;
       if (available.isNotEmpty) {
         showDynamic1 = true;
         dynamic1Label = available[0];
+        debugPrint(
+          "[AdditionalViewsTabsWidget.build] Dynamic Tab 1 Label set to: $dynamic1Label",
+        );
       }
       if (available.length > 1) {
         showDynamic2 = true;
         dynamic2Label = available[1];
+        debugPrint(
+          "[AdditionalViewsTabsWidget.build] Dynamic Tab 2 Label set to: $dynamic2Label",
+        );
       }
     });
+    // Logging for error or loading states of dynamicViewsState can be done by checking its properties
+    if (dynamicViewsState.hasError) {
+      debugPrint(
+        "[AdditionalViewsTabsWidget.build] Error loading dynamicViewsProvider: ${dynamicViewsState.error}. Dynamic tabs might not show or show default labels.",
+      );
+    }
+    if (dynamicViewsState.isLoading) {
+      debugPrint(
+        "[AdditionalViewsTabsWidget.build] dynamicViewsProvider is loading. Dynamic tabs will use placeholders if shown.",
+      );
+    }
 
     bool dynamicTabsPlaceholders =
-        dynamicViewsState is AsyncLoading || dynamicViewsState is AsyncError;
+        dynamicViewsState.isLoading || dynamicViewsState.hasError;
 
-    int fixedTabCount = 4; // Coach, Player, Franchise, Team
+    int fixedTabCount = 4;
     int dynamicTabCount = 0;
     if (showDynamic1 || dynamicTabsPlaceholders) dynamicTabCount++;
-    if (showDynamic2 || (dynamicTabsPlaceholders && showDynamic1)) {
+    if (showDynamic2 || (dynamicTabsPlaceholders && dynamicTabCount == 1)) {
       dynamicTabCount++;
     }
 
     int totalVisibleTabs = fixedTabCount + dynamicTabCount;
-    int maxTabs = 6; // Total slots available in the Row
+    int maxTabs = 6;
 
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -320,7 +385,8 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
             ref,
           ),
 
-          if (showDynamic1 || dynamicTabsPlaceholders)
+          if (showDynamic1 ||
+              (dynamicTabsPlaceholders && totalVisibleTabs < maxTabs))
             _buildTab(
               context,
               Icons.insights_outlined,
@@ -329,7 +395,11 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
               ref,
             ),
 
-          if (showDynamic2 || (dynamicTabsPlaceholders && showDynamic1))
+          if (showDynamic2 ||
+              (dynamicTabsPlaceholders &&
+                  totalVisibleTabs < maxTabs &&
+                  (showDynamic1 ||
+                      (dynamicTabsPlaceholders && dynamicTabCount >= 1))))
             _buildTab(
               context,
               Icons.auto_awesome_outlined,
@@ -338,12 +408,9 @@ class AdditionalViewsTabsWidget extends ConsumerWidget {
               ref,
             ),
 
-          // --- Corrected Spacer Logic ---
-          // Add spacers to fill remaining slots if fewer than maxTabs are visible
           if (totalVisibleTabs < maxTabs)
             for (int i = 0; i < (maxTabs - totalVisibleTabs); i++)
               const Expanded(child: SizedBox()),
-          // --- End Corrected Spacer Logic ---
         ],
       ),
     );
@@ -376,8 +443,18 @@ class ViewContentSheet extends ConsumerWidget {
     final textTheme = theme.textTheme;
     final currentLocale = ref.watch(localeNotifierProvider);
 
+    debugPrint(
+      "[ViewContentSheet.build] Current locale from provider: ${currentLocale.languageCode} for view: ${viewData.viewName}",
+    );
+
     final headline = viewData.getLocalizedHeadline(currentLocale.languageCode);
     final content = viewData.getLocalizedContent(currentLocale.languageCode);
+
+    debugPrint(
+      "[ViewContentSheet.build] Displaying view: '${viewData.viewName}' with localized data:\n"
+      "  Headline: '$headline'\n"
+      "  Content (first 50): '${content.substring(0, content.length > 50 ? 50 : content.length)}...'",
+    );
 
     return ListView(
       controller: scrollController,

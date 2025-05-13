@@ -1,4 +1,4 @@
-// File: lib/features/cluster_detail/ui/widgets/cluster_summary_widget.dart
+// lib/features/cluster_detail/ui/widgets/cluster_summary_widget.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,18 +29,28 @@ class ClusterSummaryWidget extends ConsumerWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
+    debugPrint(
+      "[ClusterSummaryWidget.build] Current locale from provider: ${currentLocale.languageCode}",
+    );
+
     final headline = summaryData.getLocalizedHeadline(
       currentLocale.languageCode,
     );
     final content = summaryData.getLocalizedContent(currentLocale.languageCode);
     final imageUrl = summaryData.imageUrl;
 
+    debugPrint(
+      "[ClusterSummaryWidget.build] Displaying with localized data:\n"
+      "  Headline: '$headline'\n"
+      "  Content (first 50): '${content.substring(0, content.length > 50 ? 50 : content.length)}...'\n"
+      "  Image URL: '$imageUrl'",
+    );
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Headline
           Text(
             headline,
             style: textTheme.headlineMedium?.copyWith(
@@ -50,7 +60,6 @@ class ClusterSummaryWidget extends ConsumerWidget {
           ),
           const SizedBox(height: 16.0),
 
-          // Image
           if (imageUrl != null && imageUrl.isNotEmpty)
             ClipRRect(
               borderRadius: BorderRadius.circular(12.0),
@@ -82,7 +91,6 @@ class ClusterSummaryWidget extends ConsumerWidget {
           if (imageUrl != null && imageUrl.isNotEmpty)
             const SizedBox(height: 16.0),
 
-          // Content (HTML)
           Html(
             data: content,
             style: {
@@ -90,15 +98,14 @@ class ClusterSummaryWidget extends ConsumerWidget {
                 fontSize: FontSize(textTheme.bodyLarge?.fontSize ?? 16.0),
                 color: textTheme.bodyLarge?.color,
                 lineHeight: LineHeight(textTheme.bodyLarge?.height ?? 1.5),
-                margin: Margins.zero, // Use Margins.zero for flutter_html Style
-                padding: HtmlPaddings.zero, // Use HtmlPaddings.zero
+                margin: Margins.zero,
+                padding: HtmlPaddings.zero,
               ),
               "p": Style(margin: Margins.only(bottom: 12.0)),
               "a": Style(
                 color: theme.colorScheme.primary,
                 textDecoration: TextDecoration.underline,
               ),
-              // Add styles for other HTML elements if needed (h1, h2, ul, li, etc.)
             },
             onLinkTap: (url, attributes, element) {
               if (url != null) {
