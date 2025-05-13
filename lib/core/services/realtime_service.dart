@@ -4,6 +4,9 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart'; // To read selected team
+// --- ADDED IMPORT for paginatedArticlesProvider ---
+import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart';
+// --- END ADDED IMPORT ---
 
 const String _newsArticlesTable = 'NewsArticles';
 const String _dbSchema = 'public';
@@ -59,9 +62,52 @@ class RealtimeService {
     debugPrint("--- Entering _handleNewsInsert (Flutter App) ---");
     debugPrint("Received Realtime New Record: ${newRecord.toString()}");
 
+    // --- MODIFICATION FOR UI UPDATE ---
+    final String? articleTeamAbbreviation =
+        newRecord['teamId']
+            as String?; // Assuming 'teamId' is the abbreviation string like "MIA", "BUF"
+    final int? articleId =
+        newRecord['id'] as int?; // Assuming 'id' is the article ID
+
+    if (articleTeamAbbreviation != null && articleTeamAbbreviation.isNotEmpty) {
+      debugPrint(
+        "Realtime: New article (ID: $articleId) for team '$articleTeamAbbreviation' detected. Invalidating paginatedArticlesProvider for this team.",
+      );
+      // Invalidate the provider for the specific team.
+      // This will cause widgets watching it (like TeamNewsTabContent) to refetch.
+      _ref.invalidate(paginatedArticlesProvider(articleTeamAbbreviation));
+
+      // Also, if the "My Team" screen is active and showing this team,
+      // its direct fetch for the headline might also need invalidation.
+      // The paginatedArticlesProvider(selectedTeamId) in MyTeamScreen will handle this.
+
+      // If you have a "general" news feed (like "Other News" that shows *all* articles without team filter)
+      // that should also update, you would invalidate its provider too.
+      // For example, the main NewsFeedScreen's "Other News" uses paginatedArticlesProvider(null)
+      // If a new article *could* appear there, invalidate it too.
+      // Check if the source is NOT source 1 (NFL headlines are separate)
+      // and if the new article qualifies for "Other News". This depends on your logic.
+      // For now, let's assume "Other News" also needs a refresh.
+      // The 'other_news' function might be different so this might need more specific handling
+      // or rely on the fact that `paginatedArticlesProvider(null)` is for 'Other News' on main feed.
+      final int? sourceId = newRecord['source'] as int?;
+      if (sourceId != 1) {
+        // Assuming 1 is NFL_News, which is handled differently
+        debugPrint(
+          "Realtime: New article (ID: $articleId) might affect 'Other News'. Invalidating paginatedArticlesProvider(null).",
+        );
+        _ref.invalidate(paginatedArticlesProvider(null));
+      }
+    } else {
+      debugPrint(
+        "Realtime: New article (ID: $articleId) does not have a teamId or it's empty. Not invalidating specific team news provider.",
+      );
+    }
+    // --- END MODIFICATION ---
+
     final String? releaseStatus = newRecord['release'] as String?;
-    final int? articleTeamNumericId = newRecord['team'] as int?;
-    final int articleId = newRecord['id'] as int? ?? 0;
+    final int? articleTeamNumericId =
+        newRecord['team'] as int?; // This 'team' might be the numeric ID.
 
     final selectedTeamState = _ref.read(selectedTeamNotifierProvider);
     final String? userSelectedTeamAbbreviation = selectedTeamState.valueOrNull;
@@ -78,35 +124,24 @@ class RealtimeService {
     }
 
     debugPrint(
-      "Checking new article in Flutter: ID=$articleId, ReleaseStatus=$releaseStatus, ArticleTeamNumericID=$articleTeamNumericId, UserSelectedTeamAbbr=$userSelectedTeamAbbreviation, UserSelectedTeamNumericID=$userSelectedTeamNumericId",
+      "Checking new article in Flutter: ID=$articleId, ReleaseStatus=$releaseStatus, ArticleTeamNumericID (from 'team' field)=$articleTeamNumericId, UserSelectedTeamAbbr=$userSelectedTeamAbbreviation, UserSelectedTeamNumericID=$userSelectedTeamNumericId",
     );
 
     if (releaseStatus == 'PUBLISHED' &&
-        articleTeamNumericId != null &&
+        articleTeamNumericId !=
+            null && // This checks the numeric 'team' field if it exists
         userSelectedTeamNumericId != null &&
         articleTeamNumericId == userSelectedTeamNumericId) {
-      // Log that a match relevant to the current user was found.
-      // The actual push is handled entirely by the backend webhook now.
       debugPrint(
-        "✅ Flutter Realtime detected a relevant article insert (ID: $articleId) for the current user. Push notification handled by backend.",
+        "✅ Flutter Realtime detected a relevant article insert (ID: $articleId) for the current user (MATCHES PUSH LOGIC). Push notification handled by backend. UI update handled by teamId '$articleTeamAbbreviation' invalidation.",
       );
-
-      // --- TODO (Optional): Implement live UI updates here ---
-      // For example, invalidate the news feed provider to show the new article
-      // without requiring a manual refresh, but be careful about race conditions
-      // with the main list fetching.
-      // Example: ref.invalidate(paginatedArticlesProvider);
-      // --- End Optional ---
     } else {
       debugPrint(
-        "Flutter Realtime: Inserted article did not match current user's criteria.",
+        "Flutter Realtime: Inserted article (ID: $articleId) did not match push notification criteria for current user, or teamId for UI update was not available.",
       );
     }
     debugPrint("--- Exiting _handleNewsInsert (Flutter App) ---");
   }
-
-  // --- REMOVED _triggerSendPushNotification function ---
-  // This function is no longer needed as the backend webhook handles triggering.
 
   void dispose() {
     debugPrint("Disposing RealtimeService and unsubscribing...");

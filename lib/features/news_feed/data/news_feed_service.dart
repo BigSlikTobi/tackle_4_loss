@@ -300,7 +300,7 @@ class NewsFeedService {
   }) async {
     const String functionName = 'cluster_infos'; // Explicitly typed
     debugPrint(
-      "[NewsFeedService.getClusterInfos] Fetching cluster infos from $functionName ${cursor != null ? 'after cursor "${cursor}"' : ''} (limit $limit)...",
+      "[NewsFeedService.getClusterInfos] Fetching cluster infos from $functionName ${cursor != null ? 'after cursor "$cursor"' : ''} (limit $limit)...",
     );
     try {
       final parameters = <String, String>{'limit': limit.toString()};
