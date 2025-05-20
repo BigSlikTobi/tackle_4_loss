@@ -113,14 +113,16 @@ const Map<String, int> teamAbbreviationToNumericId = {
 
 // Helper function to get the full asset path
 String getTeamLogoPath(String teamAbbreviation) {
-  // Handle potential case issues and missing keys gracefully
   final logoStem = teamLogoMap[teamAbbreviation.toUpperCase()];
   if (logoStem != null) {
-    // CORRECTED PATH: Returns 'assets/team_logos/some_team_name.png' instead of 'assets/logos/...'
-    return 'assets/team_logos/${logoStem.toLowerCase().replaceAll(' ', '_')}.png';
+    final path = 'assets/team_logos/${logoStem.toLowerCase().replaceAll(' ', '_')}.png';
+    // Debug log for validation
+    // ignore: avoid_print
+    print('[getTeamLogoPath] abbr: $teamAbbreviation, stem: $logoStem, path: $path');
+    return path;
   }
-  // Return a placeholder path if team not found
-  // Ensure you have an nfl.png in assets/team_logos/
+  // ignore: avoid_print
+  print('[getTeamLogoPath] abbr: $teamAbbreviation, stem: null, path: assets/team_logos/nfl.png');
   return 'assets/team_logos/nfl.png';
 }
 

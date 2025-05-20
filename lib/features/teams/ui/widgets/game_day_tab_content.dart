@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:tackle_4_loss/features/teams/ui/widgets/placeholder_content.dart';
-// --- Import the new Injury Tab content widget ---
 import 'package:tackle_4_loss/features/teams/ui/widgets/injury_tab_content.dart';
+import 'package:tackle_4_loss/features/teams/ui/widgets/upcoming_games_tab_content.dart';
 
 class GameDayTabContent extends StatelessWidget {
   final String teamAbbreviation;
@@ -13,7 +12,7 @@ class GameDayTabContent extends StatelessWidget {
     final theme = Theme.of(context);
 
     final List<Tab> gameDayTabs = [
-      const Tab(text: 'Last Games'),
+      // const Tab(text: 'Last Games'), // Hide Last Games tab
       const Tab(text: 'Upcoming'),
       const Tab(text: 'Injuries'),
     ];
@@ -42,11 +41,11 @@ class GameDayTabContent extends StatelessWidget {
           Expanded(
             child: TabBarView(
               children: [
-                const PlaceholderContent(title: 'Last Games'),
-                const PlaceholderContent(title: 'Upcoming Game'),
-                // --- Replace Injury placeholder ---
-                InjuryTabContent(teamAbbreviation: teamAbbreviation),
+                // const PlaceholderContent(title: 'Last Games'), // Hide Last Games content
+                // --- Replace Upcoming Game placeholder ---
+                UpcomingGamesTabContent(teamAbbreviation: teamAbbreviation),
                 // --- End Replacement ---
+                InjuryTabContent(teamAbbreviation: teamAbbreviation),
               ],
             ),
           ),
