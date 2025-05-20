@@ -4,6 +4,8 @@ import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart';
 import 'package:tackle_4_loss/features/settings/ui/settings_screen.dart';
 // --- Import the new Teams Screen ---
 import 'package:tackle_4_loss/features/teams/ui/teams_screen.dart';
+// --- Import the new Standings Screen ---
+import 'package:tackle_4_loss/features/standings/ui/standings_screen.dart';
 // import 'package:url_launcher/url_launcher.dart'; // Keep commented for now
 
 class MoreOptionsSheetContent extends ConsumerWidget {
@@ -117,7 +119,20 @@ class MoreOptionsSheetContent extends ConsumerWidget {
           ),
           _buildMoreListItem(
             context: context,
-            assetIconPath: 'assets/navigation/setting.png',
+            assetIconPath: 'assets/navigation/standings.png',
+            icon: Icons.leaderboard, // fallback
+            title: 'Standings',
+            onTap: () {
+              debugPrint('Standings tapped - Navigating to StandingsScreen');
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const StandingsScreen()),
+              );
+            },
+          ),
+          _buildMoreListItem(
+            context: context,
+            assetIconPath: 'assets/navigation/settings.png',
             icon: Icons.settings_outlined, // fallback
             title: 'Settings',
             onTap: () {
