@@ -2,17 +2,38 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
-import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
+import 'package:tackle_4_loss/features/news_feed/data/cluster_article.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
-import 'package:tackle_4_loss/core/constants/team_constants.dart';
-import 'package:tackle_4_loss/core/constants/source_constants.dart'; // For source names
+import 'package:tackle_4_loss/features/news_feed/ui/cluster_article_detail_screen.dart'; // Import the new screen
+
+// Utility function to strip HTML tags
+String _stripHtmlIfNeeded(String htmlText) {
+  // Regex to remove HTML tags
+  final RegExp htmlRegExp = RegExp(
+    r"<[^>]*>",
+    multiLine: true,
+    caseSensitive: true,
+  );
+  // Regex to decode common HTML entities
+  return htmlText
+      .replaceAll(htmlRegExp, '')
+      .replaceAll('&nbsp;', ' ')
+      .replaceAll('&amp;', '&')
+      .replaceAll('&lt;', '<')
+      .replaceAll('&gt;', '>')
+      .replaceAll('&quot;', '"')
+      .replaceAll('&#39;', "'")
+      .trim(); // Trim whitespace
+}
 
 class NflHeadlineItemCard extends ConsumerWidget {
-  final ArticlePreview article;
+  final ClusterArticle clusterArticle; // New property
 
-  const NflHeadlineItemCard({super.key, required this.article});
+  const NflHeadlineItemCard({
+    super.key,
+    required this.clusterArticle,
+  }); // New constructor
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -20,19 +41,35 @@ class NflHeadlineItemCard extends ConsumerWidget {
     final textTheme = theme.textTheme;
     final currentLocale = ref.watch(localeNotifierProvider);
 
-    final headlineToShow =
+    final rawHeadline =
         (currentLocale.languageCode == 'de' &&
-                article.germanHeadline.isNotEmpty)
-            ? article.germanHeadline
-            : (article.englishHeadline.isNotEmpty
-                ? article.englishHeadline
+                clusterArticle.deHeadline.isNotEmpty)
+            ? clusterArticle.deHeadline
+            : (clusterArticle.englishHeadline.isNotEmpty
+                ? clusterArticle.englishHeadline
                 : "No Title");
 
-    final sourceName =
-        article.source != null
-            ? sourceIdToDisplayName[article.source!] ??
-                "NFL" // Fallback to NFL
-            : "NFL"; // Default if source is null
+    final headlineToShow = _stripHtmlIfNeeded(
+      rawHeadline,
+    ); // Strip HTML from the chosen headline
+
+    // Find the newest date from sources
+    DateTime? newestSourceDate;
+    if (clusterArticle.sources.isNotEmpty) {
+      final validDates =
+          clusterArticle.sources
+              .map((source) => source.createdAt)
+              .whereType<DateTime>() // Filter out null dates
+              .toList();
+      if (validDates.isNotEmpty) {
+        validDates.sort(
+          (a, b) => b.compareTo(a),
+        ); // Sort descending, newest first
+        newestSourceDate = validDates.first;
+      }
+    }
+    // If no source dates, fallback to the article's main createdAt
+    final displayDate = newestSourceDate ?? clusterArticle.createdAt;
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
@@ -41,10 +78,20 @@ class NflHeadlineItemCard extends ConsumerWidget {
       elevation: 3.0,
       child: InkWell(
         onTap: () {
-          debugPrint(
-            "Tapped NFL Headline Item ${article.id}. Navigating to detail.",
-          );
-          ref.read(currentDetailArticleIdProvider.notifier).state = article.id;
+          // Navigate to detail screen
+          if (clusterArticle.clusterArticleId.isNotEmpty) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder:
+                    (context) => ClusterArticleDetailScreen(
+                      clusterArticleId: clusterArticle.clusterArticleId,
+                    ),
+              ),
+            );
+          } else {
+            debugPrint("Cannot navigate: Cluster Article ID is empty.");
+          }
         },
         child: Stack(
           alignment: Alignment.bottomLeft,
@@ -52,9 +99,10 @@ class NflHeadlineItemCard extends ConsumerWidget {
             // Background Image
             Positioned.fill(
               child:
-                  (article.imageUrl != null && article.imageUrl!.isNotEmpty)
+                  (clusterArticle.imageUrl != null &&
+                          clusterArticle.imageUrl!.isNotEmpty)
                       ? CachedNetworkImage(
-                        imageUrl: article.imageUrl!,
+                        imageUrl: clusterArticle.imageUrl!,
                         fit: BoxFit.cover,
                         placeholder:
                             (context, url) =>
@@ -63,7 +111,7 @@ class NflHeadlineItemCard extends ConsumerWidget {
                             (context, url, error) => Container(
                               color: Colors.grey[300],
                               child: Icon(
-                                Icons.sports_football,
+                                Icons.sports_football, // Keep generic icon
                                 size: 60,
                                 color: Colors.grey[400],
                               ),
@@ -109,7 +157,7 @@ class NflHeadlineItemCard extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    headlineToShow,
+                    headlineToShow, // Use the stripped headline
                     style: textTheme.titleLarge?.copyWith(
                       color: AppColors.white,
                       fontWeight: FontWeight.bold,
@@ -127,35 +175,12 @@ class NflHeadlineItemCard extends ConsumerWidget {
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      // Source Info (Text Only)
-                      Text(
-                        sourceName, // Should be "NFL" or from sourceIdToDisplayName
-                        style: textTheme.bodySmall?.copyWith(
-                          color: AppColors.white.withAlpha(
-                            204,
-                          ), // 0.8 * 255 ≈ 204
-                        ),
-                      ),
-                      // Separator if date exists
-                      if (article.createdAt != null)
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                          child: Text(
-                            '•',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: AppColors.white.withAlpha(
-                                153,
-                              ), // 0.6 * 255 ≈ 153
-                            ),
-                          ),
-                        ),
                       // Date (No Time)
-                      if (article.createdAt != null)
+                      if (displayDate != null)
                         Text(
-                          // --- CHANGE 2: DateFormat changed ---
-                          DateFormat.yMd(
-                            currentLocale.languageCode,
-                          ).format(article.createdAt!.toLocal()),
+                          DateFormat.yMd(currentLocale.languageCode).format(
+                            displayDate, // Use the determined displayDate
+                          ),
                           style: textTheme.bodySmall?.copyWith(
                             color: AppColors.white.withAlpha(
                               204,
@@ -163,48 +188,6 @@ class NflHeadlineItemCard extends ConsumerWidget {
                           ),
                         ),
                       const Spacer(),
-                      // Team Logo
-                      if (article.teamId != null && article.teamId!.isNotEmpty)
-                        // --- CHANGE 3: Ensure circular display and clean look ---
-                        Container(
-                          height:
-                              28, // Increased size slightly for better presence
-                          width: 28,
-                          decoration: BoxDecoration(
-                            // The white background for the logo to "pop"
-                            color: AppColors.white.withAlpha(
-                              230,
-                            ), // 0.9 * 255 ≈ 230
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withAlpha(
-                                  77,
-                                ), // 0.3 * 255 ≈ 77
-                                blurRadius: 2, // Softer shadow
-                                offset: const Offset(0, 1),
-                              ),
-                            ],
-                          ),
-                          child: ClipOval(
-                            // Ensures the image itself is clipped to a circle
-                            child: Padding(
-                              // Padding inside the circle, around the image
-                              padding: const EdgeInsets.all(
-                                3.0,
-                              ), // Adjust as needed
-                              child: Image.asset(
-                                getTeamLogoPath(article.teamId!),
-                                fit:
-                                    BoxFit
-                                        .contain, // Contain ensures whole logo is visible
-                                errorBuilder:
-                                    (ctx, err, st) => const SizedBox(),
-                              ),
-                            ),
-                          ),
-                        ),
-                      // --- End CHANGE 3 ---
                     ],
                   ),
                 ],

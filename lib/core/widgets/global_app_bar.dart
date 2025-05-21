@@ -42,7 +42,9 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
 
     return AppBar(
       backgroundColor: AppColors.backgroundLight,
-      foregroundColor: AppColors.textPrimary,
+      foregroundColor:
+          AppColors
+              .textPrimary, // This should set the default color for text and icons
       elevation: 0,
       scrolledUnderElevation: 0.5,
       shadowColor: Colors.black.withAlpha(26),
