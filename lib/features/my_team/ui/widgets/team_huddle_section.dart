@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
-import 'package:tackle_4_loss/features/my_team/ui/widgets/upcoming_games_card.dart';
-import 'package:tackle_4_loss/features/my_team/ui/widgets/injury_report_card.dart';
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/headline_story_card.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
 // --- FIX: Add import for layout constants ---
@@ -24,7 +22,9 @@ class TeamHuddleSection extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final screenWidth = MediaQuery.of(context).size.width;
-    // --- CORRECT: Now uses imported constant ---
+    // const cardSpacing = 12.0; // Removed as it's no longer used
+
+    // Determine layout based on screen width
     final bool isMobileLayout = screenWidth < kMobileLayoutBreakpoint;
 
     final logoPath = getTeamLogoPath(teamId);
@@ -224,24 +224,32 @@ class TeamHuddleSection extends StatelessWidget {
     bool isMobile,
     String teamId,
   ) {
-    const cardSpacing = 12.0;
     if (isMobile) {
-      return Column(
-        children: [
-          UpcomingGamesCard(teamId: teamId),
-          const SizedBox(height: cardSpacing),
-          InjuryReportCard(teamId: teamId),
-        ],
-      );
+      return _buildMobileLayout(context);
     } else {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(child: UpcomingGamesCard(teamId: teamId)),
-          const SizedBox(width: cardSpacing),
-          Expanded(child: InjuryReportCard(teamId: teamId)),
-        ],
-      );
+      return _buildTabletLayout(context);
     }
+  }
+
+  Widget _buildMobileLayout(BuildContext context) {
+    // For mobile, stack cards vertically
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // UpcomingGamesCard(teamId: teamId),
+        // InjuryReportCard(teamId: teamId),
+      ],
+    );
+  }
+
+  Widget _buildTabletLayout(BuildContext context) {
+    // For tablet, arrange cards in a row
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Expanded(child: UpcomingGamesCard(teamId: teamId)),
+        // Expanded(child: InjuryReportCard(teamId: teamId)),
+      ],
+    );
   }
 }

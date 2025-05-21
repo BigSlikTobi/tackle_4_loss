@@ -1,11 +1,13 @@
 // lib/features/news_feed/ui/news_feed_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart'; // Import SmoothPageIndicator
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart';
-import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
+import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart'; // Re-enabled import
+import 'package:tackle_4_loss/features/news_feed/data/cluster_article.dart'; // New import
+import 'package:tackle_4_loss/features/news_feed/logic/featured_cluster_provider.dart'; // New import
 // import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart'; // Already imported by provider
 import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
 import 'dart:math' as math;
@@ -24,12 +26,14 @@ class NewsFeedScreen extends ConsumerStatefulWidget {
 
 class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   final ScrollController _scrollController = ScrollController();
-  late PageController _nflHeadlinesPageController;
+  late PageController _featuredClusterPageController; // Renamed and re-purposed
 
   @override
   void initState() {
     super.initState();
-    _nflHeadlinesPageController = PageController(initialPage: 1000);
+    // Initialize with a large initial page for infinite looping illusion if desired,
+    // or 0 if not. For simplicity, let's start with 0.
+    _featuredClusterPageController = PageController(initialPage: 0);
     // For Story Lines, pre-fetch data for the first page if needed.
     // This ensures that when the widget builds, data for page 1 is likely already loading or loaded.
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -44,23 +48,21 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _nflHeadlinesPageController.dispose();
+    _featuredClusterPageController.dispose(); // Dispose the controller
     super.dispose();
   }
 
   Future<void> _handleRefresh() async {
     debugPrint("NewsFeedScreen refresh triggered.");
-    ref.invalidate(nflHeadlinesProvider);
+    ref.invalidate(featuredClusterProvider);
     ref.invalidate(paginatedClusterInfosProvider);
     ref.invalidate(paginatedArticlesProvider(null));
 
-    final nflHeadlines = ref.read(nflHeadlinesProvider).valueOrNull;
-    if (_nflHeadlinesPageController.hasClients &&
-        nflHeadlines != null &&
-        nflHeadlines.isNotEmpty) {
-      _nflHeadlinesPageController.jumpToPage(1000);
+    // Reset PageView to the first page on refresh
+    if (_featuredClusterPageController.hasClients) {
+      _featuredClusterPageController.jumpToPage(0);
     }
-    ref.read(nflHeadlinesPageIndexProvider.notifier).state = 0;
+    ref.read(featuredClusterPageIndexProvider.notifier).state = 0;
 
     ref.read(storyLinesCurrentPageProvider.notifier).state = 1;
     // After invalidating, ensure data for the new page 1 is fetched.
@@ -71,7 +73,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final nflHeadlinesAsync = ref.watch(nflHeadlinesProvider);
+    final featuredClusterAsync = ref.watch(featuredClusterProvider);
     final paginatedClusterInfosAsync = ref.watch(paginatedClusterInfosProvider);
     final otherNewsTop8Async = ref.watch(paginatedArticlesProvider(null));
 
@@ -98,7 +100,10 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
             parent: AlwaysScrollableScrollPhysics(),
           ),
           slivers: [
-            _buildNflHeadlinesSection(context, nflHeadlinesAsync),
+            _buildFeaturedClusterStorySection(
+              context,
+              featuredClusterAsync,
+            ), // Updated method call
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
@@ -133,58 +138,41 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
     );
   }
 
-  Widget _buildNflHeadlinesSection(
+  // Renamed and refactored from _buildNflHeadlinesSection
+  Widget _buildFeaturedClusterStorySection(
     BuildContext context,
-    AsyncValue<List<ArticlePreview>> nflHeadlinesAsync,
+    AsyncValue<List<ClusterArticle>>
+    featuredClusterAsync, // Takes list of ClusterArticle
   ) {
     final theme = Theme.of(context);
     const double pageViewHeight = 250.0;
     const double indicatorHeight = 8.0;
     const double spacingBelowIndicator = 12.0;
+    final totalHeight =
+        pageViewHeight + indicatorHeight + spacingBelowIndicator;
 
-    return nflHeadlinesAsync.when(
-      data: (headlines) {
-        if (headlines.isEmpty) {
+    return featuredClusterAsync.when(
+      data: (articles) {
+        if (articles.isEmpty) {
           return SliverToBoxAdapter(
             child: SizedBox(
-              height: pageViewHeight + indicatorHeight + spacingBelowIndicator,
+              height: totalHeight,
               child: Center(
                 child: Text(
-                  "No NFL headlines available.",
+                  "No featured stories available.",
                   style: theme.textTheme.bodyMedium,
                 ),
               ),
             ),
           );
         }
-        final actualItemCount = headlines.length;
-        final pageViewItemCount =
-            actualItemCount > 1 ? actualItemCount * 2000 : actualItemCount;
 
-        if (actualItemCount > 0 &&
-            _nflHeadlinesPageController.positions.isEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _nflHeadlinesPageController.positions.isEmpty) {
-              _nflHeadlinesPageController = PageController(
-                initialPage: actualItemCount > 1 ? 1000 : 0,
-              );
-              if (mounted) setState(() {});
-              debugPrint(
-                "[NFLHeadlines PView] Re-initialized _nflHeadlinesPageController with initialPage: ${actualItemCount > 1 ? 1000 : 0}",
-              );
-            }
-          });
-        } else if (actualItemCount == 0 &&
-            _nflHeadlinesPageController.positions.isEmpty) {
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted && _nflHeadlinesPageController.positions.isEmpty) {
-              _nflHeadlinesPageController = PageController(initialPage: 0);
-              if (mounted) setState(() {});
-              debugPrint(
-                "[NFLHeadlines PView] Initialized _nflHeadlinesPageController with initialPage: 0 (no pages)",
-              );
-            }
-          });
+        // If PageController was disposed and recreated, ensure it's up to date.
+        // This might be needed if the widget rebuilds significantly.
+        if (!_featuredClusterPageController.hasClients && articles.isNotEmpty) {
+          _featuredClusterPageController = PageController(
+            initialPage: ref.read(featuredClusterPageIndexProvider),
+          );
         }
 
         return SliverToBoxAdapter(
@@ -193,33 +181,30 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
               SizedBox(
                 height: pageViewHeight,
                 child: PageView.builder(
-                  controller: _nflHeadlinesPageController,
-                  itemCount: pageViewItemCount,
+                  controller: _featuredClusterPageController,
+                  itemCount: articles.length,
                   itemBuilder: (context, index) {
-                    final actualIndex =
-                        actualItemCount > 0 ? index % actualItemCount : 0;
-                    if (actualItemCount == 0) return const SizedBox.shrink();
-                    final article = headlines[actualIndex];
+                    final article = articles[index];
                     return Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 6.0),
-                      child: NflHeadlineItemCard(article: article),
+                      child: NflHeadlineItemCard(clusterArticle: article),
                     );
                   },
                   onPageChanged: (index) {
-                    ref.read(nflHeadlinesPageIndexProvider.notifier).state =
-                        actualItemCount > 0 ? index % actualItemCount : 0;
+                    ref.read(featuredClusterPageIndexProvider.notifier).state =
+                        index;
                   },
                 ),
               ),
-              if (actualItemCount > 1)
+              if (articles.length > 1)
                 Padding(
                   padding: const EdgeInsets.only(
                     top: 8.0,
                     bottom: spacingBelowIndicator,
                   ),
                   child: SmoothPageIndicator(
-                    controller: _nflHeadlinesPageController,
-                    count: actualItemCount,
+                    controller: _featuredClusterPageController,
+                    count: articles.length,
                     effect: ScrollingDotsEffect(
                       dotHeight: indicatorHeight,
                       dotWidth: indicatorHeight,
@@ -227,9 +212,16 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                       activeDotColor: theme.colorScheme.primary,
                       dotColor: Colors.grey.shade300,
                     ),
+                    onDotClicked: (index) {
+                      _featuredClusterPageController.animateToPage(
+                        index,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                      );
+                    },
                   ),
                 ),
-              if (actualItemCount <= 1)
+              if (articles.length <= 1) // Reserve space even if no indicator
                 const SizedBox(height: indicatorHeight + spacingBelowIndicator),
             ],
           ),
@@ -238,19 +230,19 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
       loading:
           () => SliverToBoxAdapter(
             child: SizedBox(
-              height: pageViewHeight + indicatorHeight + spacingBelowIndicator,
+              height: totalHeight,
               child: const Center(child: LoadingIndicator()),
             ),
           ),
       error:
           (error, stack) => SliverToBoxAdapter(
             child: SizedBox(
-              height: pageViewHeight + indicatorHeight + spacingBelowIndicator,
+              height: totalHeight,
               child: Padding(
                 padding: const EdgeInsets.all(16.0),
                 child: ErrorMessageWidget(
-                  message: "Could not load NFL headlines: $error",
-                  onRetry: () => ref.invalidate(nflHeadlinesProvider),
+                  message: "Could not load featured stories: $error",
+                  onRetry: () => ref.invalidate(featuredClusterProvider),
                 ),
               ),
             ),
@@ -320,7 +312,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
         final totalDisplayableUiPagesInBuffer =
             (totalFetchedItemsInBuffer / storyLinesPerPage).ceil();
 
-        // Next button is enabled if current UI page < total displayable UI pages OR if backend has more data.
+        // Next button is enabled if current UI page < total displayable ui pages OR if backend has more data.
         final bool canGoNext =
             currentUiPage < totalDisplayableUiPagesInBuffer ||
             clusterNotifier.hasMoreData;
