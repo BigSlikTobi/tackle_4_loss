@@ -10,53 +10,84 @@ import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 // Import navigation provider to update detail state
 import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 
-class HeadlineStoryCard extends ConsumerWidget {
+// Changed to ConsumerStatefulWidget
+class HeadlineStoryCard extends ConsumerStatefulWidget {
   final ArticlePreview article;
 
   const HeadlineStoryCard({super.key, required this.article});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<HeadlineStoryCard> createState() => _HeadlineStoryCardState();
+}
+
+class _HeadlineStoryCardState extends ConsumerState<HeadlineStoryCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Alignment> _alignmentAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(
+        seconds: 14,
+      ), // Duration for one way pan (40% slower)
+    )..repeat(reverse: true); // Loop and reverse
+
+    _alignmentAnimation = AlignmentTween(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut, // Smooth easing for the pan
+      ),
+    );
+
+    _controller.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     final currentLocale = ref.watch(localeNotifierProvider);
 
     final headlineToShow =
         currentLocale.languageCode == 'de'
-            ? article.germanHeadline
-            : article.englishHeadline;
+            ? widget.article.germanHeadline
+            : widget.article.englishHeadline;
 
     final displayHeadline =
         headlineToShow.isNotEmpty
             ? headlineToShow
-            : (article.englishHeadline.isNotEmpty
-                ? article.englishHeadline
+            : (widget.article.englishHeadline.isNotEmpty
+                ? widget.article.englishHeadline
                 : "Headline Unavailable");
 
-    // Use LayoutBuilder to make decisions based on available width
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
-        // Determine if we are on a large screen (web)
-        // kIsWeb ensures this logic only applies to web builds.
         final bool isLargeScreen = kIsWeb && constraints.maxWidth > 600;
 
-        // Define responsive properties
-        final double cardHeight =
-            isLargeScreen ? 600.0 : 200.0; // Updated height for web
-        final double cardMaxWidth =
-            isLargeScreen ? 800.0 : double.infinity; // Max width for web
+        final double cardHeight = isLargeScreen ? 600.0 : 200.0;
+        final double cardMaxWidth = isLargeScreen ? 800.0 : double.infinity;
         final EdgeInsets cardPadding =
             isLargeScreen
-                ? const EdgeInsets.fromLTRB(
-                  16.0,
-                  16.0,
-                  16.0,
-                  12.0,
-                ) // Larger padding for web
+                ? const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 12.0)
                 : const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 8.0);
         final TextStyle headlineStyle =
             isLargeScreen
                 ? textTheme.headlineSmall!.copyWith(
-                  // Larger font for web
                   color: AppColors.white,
                   fontWeight: FontWeight.bold,
                   shadows: [
@@ -82,7 +113,6 @@ class HeadlineStoryCard extends ConsumerWidget {
         return Padding(
           padding: cardPadding,
           child: Center(
-            // Center the card on web if it has a max width
             child: ConstrainedBox(
               constraints: BoxConstraints(maxWidth: cardMaxWidth),
               child: Card(
@@ -95,26 +125,29 @@ class HeadlineStoryCard extends ConsumerWidget {
                 shadowColor: Colors.black.withAlpha((255 * 0.2).round()),
                 child: InkWell(
                   onTap: () {
-                    // --- MODIFIED: Update detail state instead of Navigator.push ---
                     ref.read(currentDetailArticleIdProvider.notifier).state =
-                        article.id;
-                    // --- End Modification ---
+                        widget.article.id;
                   },
                   child: Stack(
                     alignment: Alignment.bottomLeft,
                     children: [
                       SizedBox(
-                        // Use SizedBox to control height directly on web
                         height: cardHeight,
-                        width:
-                            double
-                                .infinity, // Take full width of ConstrainedBox/Card
+                        width: double.infinity,
                         child:
-                            (article.imageUrl != null &&
-                                    article.imageUrl!.isNotEmpty)
+                            (widget.article.imageUrl != null &&
+                                    widget.article.imageUrl!.isNotEmpty)
                                 ? CachedNetworkImage(
-                                  imageUrl: article.imageUrl!,
-                                  fit: BoxFit.cover,
+                                  imageUrl: widget.article.imageUrl!,
+                                  // fit: BoxFit.cover, // Removed: Handled by Image widget in imageBuilder
+                                  imageBuilder:
+                                      (context, imageProvider) => Image(
+                                        image: imageProvider,
+                                        fit: BoxFit.cover,
+                                        alignment:
+                                            _alignmentAnimation
+                                                .value, // Apply animated alignment
+                                      ),
                                   placeholder:
                                       (context, url) =>
                                           Container(color: Colors.grey[300]),
@@ -127,8 +160,7 @@ class HeadlineStoryCard extends ConsumerWidget {
                                       ),
                                 )
                                 : Container(
-                                  height:
-                                      cardHeight, // Ensure consistent height
+                                  height: cardHeight,
                                   width: double.infinity,
                                   color: Colors.grey[300],
                                   child: const Center(

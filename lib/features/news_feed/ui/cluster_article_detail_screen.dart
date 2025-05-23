@@ -161,12 +161,13 @@ class ClusterArticleDetailScreen extends ConsumerWidget {
                                 ),
                           );
                         } else {
-                          // Mobile
+                          // Mobile - show full image without cropping
                           imageContent = CachedNetworkImage(
                             imageUrl: article.imageUrl!,
-                            fit: BoxFit.cover, // Original behavior for mobile
+                            fit:
+                                BoxFit
+                                    .contain, // Changed to contain to show full image
                             width: double.infinity,
-                            height: 200, // Original fixed height for mobile
                             placeholder:
                                 (context, url) => const AspectRatio(
                                   aspectRatio: 16 / 9,
@@ -203,15 +204,21 @@ class ClusterArticleDetailScreen extends ConsumerWidget {
                           );
                         } else {
                           // Mobile
-                          imageContent = Container(
-                            height:
-                                200, // Original fixed height for mobile fallback
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              // borderRadius is handled by ClipRRect
-                            ),
-                            child: const Center(
-                              child: Icon(Icons.image_not_supported, size: 50),
+                          imageContent = AspectRatio(
+                            aspectRatio:
+                                16 /
+                                9, // Consistent aspect ratio for mobile fallback
+                            child: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.grey[300],
+                                // borderRadius is handled by ClipRRect
+                              ),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.image_not_supported,
+                                  size: 50,
+                                ),
+                              ),
                             ),
                           );
                         }

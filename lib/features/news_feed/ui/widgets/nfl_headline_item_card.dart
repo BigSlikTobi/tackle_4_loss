@@ -28,37 +28,78 @@ String _stripHtmlIfNeeded(String htmlText) {
       .trim(); // Trim whitespace
 }
 
-class NflHeadlineItemCard extends ConsumerWidget {
-  final ClusterArticle clusterArticle; // New property
+// Changed to ConsumerStatefulWidget
+class NflHeadlineItemCard extends ConsumerStatefulWidget {
+  final ClusterArticle clusterArticle;
 
-  const NflHeadlineItemCard({
-    super.key,
-    required this.clusterArticle,
-  }); // New constructor
+  const NflHeadlineItemCard({super.key, required this.clusterArticle});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<NflHeadlineItemCard> createState() =>
+      _NflHeadlineItemCardState();
+}
+
+class _NflHeadlineItemCardState extends ConsumerState<NflHeadlineItemCard>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<Alignment> _alignmentAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(
+        seconds: 40,
+      ), // Duration for one way pan (40% slower)
+    )..repeat(reverse: true); // Loop and reverse
+
+    _alignmentAnimation = AlignmentTween(
+      begin: Alignment.topCenter,
+      end: Alignment.bottomCenter,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeInOut, // Smooth easing for the pan
+      ),
+    );
+
+    // Add listener to rebuild widget on animation ticks
+    // Using AnimatedBuilder is an alternative, but direct setState is fine here.
+    _controller.addListener(() {
+      if (mounted) {
+        setState(() {});
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final currentLocale = ref.watch(localeNotifierProvider);
 
     final rawHeadline =
         (currentLocale.languageCode == 'de' &&
-                clusterArticle.deHeadline.isNotEmpty)
-            ? clusterArticle.deHeadline
-            : (clusterArticle.englishHeadline.isNotEmpty
-                ? clusterArticle.englishHeadline
+                widget.clusterArticle.deHeadline.isNotEmpty)
+            ? widget.clusterArticle.deHeadline
+            : (widget.clusterArticle.englishHeadline.isNotEmpty
+                ? widget.clusterArticle.englishHeadline
                 : "No Title");
 
-    final headlineToShow = _stripHtmlIfNeeded(
-      rawHeadline,
-    ); // Strip HTML from the chosen headline
+    final headlineToShow = _stripHtmlIfNeeded(rawHeadline);
 
     // Find the newest date from sources
     DateTime? newestSourceDate;
-    if (clusterArticle.sources.isNotEmpty) {
+    if (widget.clusterArticle.sources.isNotEmpty) {
       final validDates =
-          clusterArticle.sources
+          widget.clusterArticle.sources
               .map((source) => source.createdAt)
               .whereType<DateTime>() // Filter out null dates
               .toList();
@@ -70,7 +111,7 @@ class NflHeadlineItemCard extends ConsumerWidget {
       }
     }
     // If no source dates, fallback to the article's main createdAt
-    final displayDate = newestSourceDate ?? clusterArticle.createdAt;
+    final displayDate = newestSourceDate ?? widget.clusterArticle.createdAt;
 
     return LayoutBuilder(
       builder: (BuildContext context, BoxConstraints constraints) {
@@ -134,14 +175,14 @@ class NflHeadlineItemCard extends ConsumerWidget {
                   child: InkWell(
                     onTap: () {
                       // Navigate to detail screen
-                      if (clusterArticle.clusterArticleId.isNotEmpty) {
+                      if (widget.clusterArticle.clusterArticleId.isNotEmpty) {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                             builder:
                                 (context) => ClusterArticleDetailScreen(
                                   clusterArticleId:
-                                      clusterArticle.clusterArticleId,
+                                      widget.clusterArticle.clusterArticleId,
                                 ),
                           ),
                         );
@@ -157,11 +198,22 @@ class NflHeadlineItemCard extends ConsumerWidget {
                         // Background Image
                         Positioned.fill(
                           child:
-                              (clusterArticle.imageUrl != null &&
-                                      clusterArticle.imageUrl!.isNotEmpty)
+                              (widget.clusterArticle.imageUrl != null &&
+                                      widget
+                                          .clusterArticle
+                                          .imageUrl!
+                                          .isNotEmpty)
                                   ? CachedNetworkImage(
-                                    imageUrl: clusterArticle.imageUrl!,
-                                    fit: BoxFit.cover,
+                                    imageUrl: widget.clusterArticle.imageUrl!,
+                                    // fit: BoxFit.cover, // Removed: Handled by Image widget in imageBuilder
+                                    imageBuilder:
+                                        (context, imageProvider) => Image(
+                                          image: imageProvider,
+                                          fit: BoxFit.cover,
+                                          alignment:
+                                              _alignmentAnimation
+                                                  .value, // Apply animated alignment
+                                        ),
                                     placeholder:
                                         (context, url) =>
                                             Container(color: Colors.grey[300]),
