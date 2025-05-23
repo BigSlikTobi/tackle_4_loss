@@ -93,25 +93,21 @@ class NewsFeedService {
   Future<PaginatedArticlesResponse> getArticlePreviews({
     int limit = 20,
     int? cursor,
-    String? teamId,
+    String? teamId, // Allow teamId to be null
     int? excludeSourceId,
   }) async {
-    if (teamId == null) {
-      debugPrint(
-        "[NewsFeedService.getArticlePreviews] WARN: Called with null teamId. This should be handled by getOtherNews. Returning empty for safety.",
-      );
-      return PaginatedArticlesResponse(articles: [], nextCursor: null);
-    }
+    // Removed the early return for teamId == null.
+    // The Supabase function 'articlePreviews' should handle null teamId to mean all teams.
 
     try {
-      const String functionName = 'articlePreviews'; // Explicitly typed
+      const String functionName = 'articlePreviews';
       debugPrint(
-        "[NewsFeedService.getArticlePreviews] Fetching for teamId: $teamId, excludeSourceId: $excludeSourceId, limit: $limit, cursor: $cursor from EF: $functionName",
+        "[NewsFeedService.getArticlePreviews] Fetching for teamId: ${teamId ?? 'ALL'}, excludeSourceId: $excludeSourceId, limit: $limit, cursor: $cursor from EF: $functionName",
       );
-      final parameters = <String, dynamic>{
-        'limit': limit.toString(),
-        'teamId': teamId,
-      };
+      final parameters = <String, dynamic>{'limit': limit.toString()};
+      if (teamId != null) {
+        parameters['teamId'] = teamId; // Only add teamId if it's not null
+      }
       if (cursor != null) {
         parameters['cursor'] = cursor.toString();
       }

@@ -8,6 +8,7 @@ import 'package:tackle_4_loss/features/teams/ui/widgets/roster_tab_content.dart'
 import 'package:tackle_4_loss/features/teams/ui/widgets/team_news_tab_content.dart';
 // --- Import the new Game Day Tab content widget ---
 import 'package:tackle_4_loss/features/teams/ui/widgets/game_day_tab_content.dart';
+import 'package:tackle_4_loss/core/widgets/web_detail_wrapper.dart'; // Import WebDetailWrapper
 
 class TeamDetailScreen extends StatefulWidget {
   final TeamInfo teamInfo;
@@ -54,52 +55,60 @@ class _TeamDetailScreenState extends State<TeamDetailScreen>
             const GlobalAppBar(
               automaticallyImplyLeading: true, // Keep back button
             ),
-            Material(
-              color: theme.appBarTheme.backgroundColor ?? theme.primaryColor,
-              child: TabBar(
-                controller: _tabController,
-                tabs: _tabs,
-                isScrollable: true,
-                labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-                unselectedLabelStyle: const TextStyle(
-                  fontWeight: FontWeight.normal,
+            Expanded(
+              // Wrap Material with Expanded
+              child: Material(
+                color: theme.appBarTheme.backgroundColor ?? theme.primaryColor,
+                child: TabBar(
+                  controller: _tabController,
+                  tabs: _tabs,
+                  isScrollable: true,
+                  labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+                  unselectedLabelStyle: const TextStyle(
+                    fontWeight: FontWeight.normal,
+                  ),
+                  labelColor: theme.appBarTheme.foregroundColor ?? Colors.white,
+                  unselectedLabelColor: (theme.appBarTheme.foregroundColor ??
+                          Colors.white)
+                      .withAlpha((0.7 * 255).toInt()),
+                  indicatorColor:
+                      theme.appBarTheme.foregroundColor ?? Colors.white,
                 ),
-                labelColor: theme.appBarTheme.foregroundColor ?? Colors.white,
-                unselectedLabelColor: (theme.appBarTheme.foregroundColor ??
-                        Colors.white)
-                    .withAlpha((0.7 * 255).toInt()),
-                indicatorColor:
-                    theme.appBarTheme.foregroundColor ?? Colors.white,
               ),
             ),
           ],
         ),
       ),
-      body: Stack(
-        // Keep stack for the badge
-        children: [
-          Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-              child: TabBarView(
-                controller: _tabController,
-                children: <Widget>[
-                  const PlaceholderContent(title: 'General Info'),
-                  RosterTabContent(teamAbbreviation: widget.teamInfo.teamId),
-                  // --- Replace Game Day placeholder ---
-                  GameDayTabContent(teamAbbreviation: widget.teamInfo.teamId),
-                  // --- End Replacement ---
-                  TeamNewsTabContent(teamAbbreviation: widget.teamInfo.teamId),
-                ],
+      body: WebDetailWrapper(
+        // Wrap the body with WebDetailWrapper
+        child: Stack(
+          // Keep stack for the badge
+          children: [
+            Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
+                child: TabBarView(
+                  controller: _tabController,
+                  children: <Widget>[
+                    const PlaceholderContent(title: 'General Info'),
+                    RosterTabContent(teamAbbreviation: widget.teamInfo.teamId),
+                    // --- Replace Game Day placeholder ---
+                    GameDayTabContent(teamAbbreviation: widget.teamInfo.teamId),
+                    // --- End Replacement ---
+                    TeamNewsTabContent(
+                      teamAbbreviation: widget.teamInfo.teamId,
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          Positioned(
-            left: 16.0,
-            bottom: 16.0,
-            child: _buildTeamLogoBadge(context, widget.teamInfo),
-          ),
-        ],
+            Positioned(
+              left: 16.0,
+              bottom: 16.0,
+              child: _buildTeamLogoBadge(context, widget.teamInfo),
+            ),
+          ],
+        ),
       ),
     );
   }

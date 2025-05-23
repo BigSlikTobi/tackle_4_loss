@@ -50,8 +50,7 @@ class PaginatedArticlesNotifier
     extends FamilyAsyncNotifier<List<ArticlePreview>, String?> {
   int? _nextCursor;
   bool _isLoadingMore = false;
-  bool _hasMore =
-      true; // Initialize optimistically, will be corrected by first fetch
+  bool _hasMore = true;
   List<ArticlePreview> _allFetchedArticles = [];
   final Set<int> _seenArticleIds = <int>{};
   String? get _teamIdFilter => arg;
@@ -60,36 +59,27 @@ class PaginatedArticlesNotifier
   Future<List<ArticlePreview>> build(String? teamId) async {
     final service = ref.watch(newsFeedServiceProvider);
     _nextCursor = null;
-    // _hasMore will be determined by the first fetch response
-    _isLoadingMore = false; // Initial build is not "loading more"
+    _isLoadingMore = false;
     _allFetchedArticles = [];
     _seenArticleIds.clear();
     debugLog("Build started.");
     try {
-      final initialLimit = (_teamIdFilter == null) ? 8 : newsItemsPerPage * 2;
-      debugLog("Fetching initial page (limit: $initialLimit)...");
+      // Always use newsItemsPerPage * 2 for initial load for consistency
+      final initialLimit = newsItemsPerPage * 2;
+      debugLog(
+        "Fetching initial page (limit: $initialLimit) for filter: '$_teamIdFilter'.",
+      );
 
       PaginatedArticlesResponse response;
-      if (_teamIdFilter == null) {
-        debugLog(
-          "Calling service.getOtherNews for initial fetch (limit: $initialLimit).",
-        );
-        response = await service.getOtherNews(limit: initialLimit);
-        _hasMore =
-            false; // "Other News" on main feed is always just the top 8, no further pagination.
-        _nextCursor = null;
-      } else {
-        debugLog(
-          "Calling service.getArticlePreviews for team '$_teamIdFilter' initial fetch (limit: $initialLimit).",
-        );
-        response = await service.getArticlePreviews(
-          limit: initialLimit,
-          teamId: _teamIdFilter,
-        );
-        _nextCursor = response.nextCursor;
-        // _hasMore is true if a next cursor is provided AND the response was not empty.
-        _hasMore = _nextCursor != null && response.articles.isNotEmpty;
-      }
+      // Unified logic: always call getArticlePreviews.
+      // The service will handle passing teamId (or null for all) to the Supabase function.
+      response = await service.getArticlePreviews(
+        limit: initialLimit,
+        teamId: _teamIdFilter, // This can be null
+      );
+
+      _nextCursor = response.nextCursor;
+      _hasMore = _nextCursor != null && response.articles.isNotEmpty;
 
       final uniqueInitialArticles =
           response.articles.where((article) {
@@ -97,18 +87,15 @@ class PaginatedArticlesNotifier
           }).toList();
       _allFetchedArticles = uniqueInitialArticles;
 
-      if (_teamIdFilter == null && _allFetchedArticles.length > 8) {
-        _allFetchedArticles = _allFetchedArticles.sublist(0, 8);
-        debugLog("Trimmed 'Other News' to 8 articles.");
-      }
+      // Removed the specific trimming logic for _teamIdFilter == null
 
       debugLog(
-        "Fetched ${response.articles.length} (unique & potentially trimmed: ${_allFetchedArticles.length}) articles. Next cursor (for teams): $_nextCursor. HasMore: $_hasMore",
+        "Fetched ${response.articles.length} (unique: ${_allFetchedArticles.length}) articles. Next cursor: $_nextCursor. HasMore: $_hasMore",
       );
       return _allFetchedArticles;
     } catch (e, stack) {
       debugLog("Error in build: $e\n$stack");
-      _hasMore = false; // Ensure _hasMore is false on error
+      _hasMore = false;
       throw Exception(
         "Failed to load initial articles for filter '$_teamIdFilter': $e",
       );
@@ -116,39 +103,29 @@ class PaginatedArticlesNotifier
   }
 
   Future<void> fetchNextPage() async {
-    if (_teamIdFilter == null) {
-      debugLog(
-        "fetchNextPage skipped: 'Other News' section is not paginated here.",
-      );
-      return;
-    }
-
-    // Corrected condition: if _nextCursor is null, we definitely can't fetch.
+    // Removed the _teamIdFilter == null check that prevented pagination for "all news"
     if (_isLoadingMore || !_hasMore || _nextCursor == null) {
       debugLog(
-        "fetchNextPage skipped (team '$_teamIdFilter'): loading=$_isLoadingMore, hasMore=$_hasMore, cursor=$_nextCursor",
+        "fetchNextPage skipped (filter '$_teamIdFilter'): loading=$_isLoadingMore, hasMore=$_hasMore, cursor=$_nextCursor",
       );
       return;
     }
     debugLog(
-      "Fetching next page for team '$_teamIdFilter' with cursor: $_nextCursor",
+      "Fetching next page for filter '$_teamIdFilter' with cursor: $_nextCursor",
     );
     _isLoadingMore = true;
-    state = AsyncData(
-      _allFetchedArticles,
-    ); // Reflect loading while showing current data
+    state = AsyncData(_allFetchedArticles);
 
     final service = ref.read(newsFeedServiceProvider);
-    final currentCursor =
-        _nextCursor; // Already confirmed non-null by the check above
+    final currentCursor = _nextCursor;
     try {
       debugLog(
-        "Calling service.getArticlePreviews for team '$_teamIdFilter' next page fetch.",
+        "Calling service.getArticlePreviews for filter '$_teamIdFilter' next page fetch.",
       );
       PaginatedArticlesResponse response = await service.getArticlePreviews(
         cursor: currentCursor,
         limit: newsItemsPerPage,
-        teamId: _teamIdFilter,
+        teamId: _teamIdFilter, // Pass null if no filter
       );
 
       int newUniqueCount = 0;
@@ -168,12 +145,12 @@ class PaginatedArticlesNotifier
       _hasMore = _nextCursor != null && response.articles.isNotEmpty;
 
       debugLog(
-        "Next page fetched for team '$_teamIdFilter'. Fetched ${response.articles.length} (new unique: $newUniqueCount). Total unique: ${_allFetchedArticles.length}. Has more: $_hasMore. New cursor: $_nextCursor",
+        "Next page fetched for filter '$_teamIdFilter'. Fetched ${response.articles.length} (new unique: $newUniqueCount). Total unique: ${_allFetchedArticles.length}. Has more: $_hasMore. New cursor: $_nextCursor",
       );
       state = AsyncData<List<ArticlePreview>>(_allFetchedArticles);
     } catch (e, stack) {
       debugLog(
-        "Error fetching next page for team '$_teamIdFilter' after cursor $currentCursor: $e\n$stack",
+        "Error fetching next page for filter '$_teamIdFilter' after cursor $currentCursor: $e\n$stack",
       );
       _hasMore = false; // Stop trying on error
       state = AsyncError<List<ArticlePreview>>(

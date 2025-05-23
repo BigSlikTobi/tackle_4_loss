@@ -1,21 +1,29 @@
 // lib/features/news_feed/ui/news_feed_screen.dart
-import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart'; // Import SmoothPageIndicator
-import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
-import 'package:tackle_4_loss/core/widgets/error_message.dart';
-import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart';
-import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart'; // Re-enabled import
-import 'package:tackle_4_loss/features/news_feed/data/cluster_article.dart'; // New import
-import 'package:tackle_4_loss/features/news_feed/logic/featured_cluster_provider.dart'; // New import
-// import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart'; // Already imported by provider
-import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
 import 'dart:math' as math;
 
+// General Flutter and Riverpod imports
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+
+// Core utilities, services, and widgets
+import 'package:tackle_4_loss/core/widgets/error_message.dart';
+import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
+import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
+
+// Imports for news feed specific data, providers, and widgets
+import 'package:tackle_4_loss/features/news_feed/data/cluster_article.dart';
+import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart';
+import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart'; // For OtherNewsListItem
+import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart'; // Added
+import 'package:tackle_4_loss/features/news_feed/logic/featured_cluster_provider.dart'; // Added
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/nfl_headline_item_card.dart';
-import 'package:tackle_4_loss/features/news_feed/ui/widgets/cluster_info_list_item.dart';
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/other_news_list_item.dart';
-import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart';
+import 'package:tackle_4_loss/features/news_feed/ui/widgets/cluster_info_grid_item.dart';
+import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart'; // Import AllNewsScreen
+
+const int storyLinesPerPage = 6; // Define or import this constant
 
 class NewsFeedScreen extends ConsumerStatefulWidget {
   const NewsFeedScreen({super.key});
@@ -26,16 +34,12 @@ class NewsFeedScreen extends ConsumerStatefulWidget {
 
 class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   final ScrollController _scrollController = ScrollController();
-  late PageController _featuredClusterPageController; // Renamed and re-purposed
+  late PageController _featuredClusterPageController;
 
   @override
   void initState() {
     super.initState();
-    // Initialize with a large initial page for infinite looping illusion if desired,
-    // or 0 if not. For simplicity, let's start with 0.
     _featuredClusterPageController = PageController(initialPage: 0);
-    // For Story Lines, pre-fetch data for the first page if needed.
-    // This ensures that when the widget builds, data for page 1 is likely already loading or loaded.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref
@@ -48,7 +52,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   @override
   void dispose() {
     _scrollController.dispose();
-    _featuredClusterPageController.dispose(); // Dispose the controller
+    _featuredClusterPageController.dispose();
     super.dispose();
   }
 
@@ -56,16 +60,15 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
     debugPrint("NewsFeedScreen refresh triggered.");
     ref.invalidate(featuredClusterProvider);
     ref.invalidate(paginatedClusterInfosProvider);
+    // Assuming paginatedArticlesProvider takes a nullable String, adjust if different
     ref.invalidate(paginatedArticlesProvider(null));
 
-    // Reset PageView to the first page on refresh
     if (_featuredClusterPageController.hasClients) {
       _featuredClusterPageController.jumpToPage(0);
     }
     ref.read(featuredClusterPageIndexProvider.notifier).state = 0;
 
     ref.read(storyLinesCurrentPageProvider.notifier).state = 1;
-    // After invalidating, ensure data for the new page 1 is fetched.
     await ref
         .read(paginatedClusterInfosProvider.notifier)
         .ensureDataForStoryLinesPage(1);
@@ -75,77 +78,81 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   Widget build(BuildContext context) {
     final featuredClusterAsync = ref.watch(featuredClusterProvider);
     final paginatedClusterInfosAsync = ref.watch(paginatedClusterInfosProvider);
+    // Assuming paginatedArticlesProvider takes a nullable String
     final otherNewsTop8Async = ref.watch(paginatedArticlesProvider(null));
 
     ref.watch(realtimeServiceProvider);
 
-    // Ensure data for the current Story Lines page is loaded before building the list.
-    // This is important when the page number changes.
     final currentStoryLinesUiPage = ref.watch(storyLinesCurrentPageProvider);
-    // Call ensureDataForStoryLinesPage here directly in build.
-    // Riverpod handles memoization, so it's safe to call.
-    // This will trigger fetches if needed when currentStoryLinesUiPage changes.
-    // Note: ensureDataForStoryLinesPage is async, but we don't await it here in build.
-    // The provider will update its state, and the UI will rebuild.
     ref
         .read(paginatedClusterInfosProvider.notifier)
         .ensureDataForStoryLinesPage(currentStoryLinesUiPage);
 
-    return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: _handleRefresh,
-        child: CustomScrollView(
-          controller: _scrollController,
-          physics: const BouncingScrollPhysics(
-            parent: AlwaysScrollableScrollPhysics(),
-          ),
-          slivers: [
-            _buildFeaturedClusterStorySection(
-              context,
-              featuredClusterAsync,
-            ), // Updated method call
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
-                child: Text(
-                  "Story Lines",
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            _buildStoryLinesPaginatedListSection(
-              context,
-              paginatedClusterInfosAsync,
-            ),
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 12.0),
-                child: Text(
-                  "Other News",
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-            ),
-            _buildOtherNewsTop8List(context, otherNewsTop8Async),
-            const SliverToBoxAdapter(child: SizedBox(height: 20)),
-          ],
+    const double maxWebWidth = 1200.0;
+
+    Widget scrollView = RefreshIndicator(
+      onRefresh: _handleRefresh,
+      child: CustomScrollView(
+        controller: _scrollController,
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
         ),
+        slivers: [
+          _buildFeaturedClusterStorySection(context, featuredClusterAsync),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 8.0),
+              child: Text(
+                "Story Lines",
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          _buildStoryLinesSliverGrid(context, paginatedClusterInfosAsync),
+          _buildStoryLinesPaginationControlsSliver(context),
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16.0, 24.0, 16.0, 12.0),
+              child: Text(
+                "News",
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          _buildOtherNewsTop8List(context, otherNewsTop8Async),
+          const SliverToBoxAdapter(
+            child: SizedBox(height: 20), // Existing bottom padding
+          ),
+        ],
       ),
+    );
+
+    return Scaffold(
+      body:
+          kIsWeb
+              ? Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: maxWebWidth),
+                  child: scrollView,
+                ),
+              )
+              : scrollView,
     );
   }
 
-  // Renamed and refactored from _buildNflHeadlinesSection
   Widget _buildFeaturedClusterStorySection(
     BuildContext context,
-    AsyncValue<List<ClusterArticle>>
-    featuredClusterAsync, // Takes list of ClusterArticle
+    AsyncValue<List<ClusterArticle>> featuredClusterAsync,
   ) {
     final theme = Theme.of(context);
-    const double pageViewHeight = 250.0;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isLargeWebScreen = kIsWeb && screenWidth > 600;
+    final double pageViewHeight = isLargeWebScreen ? 500.0 : 250.0;
+
     const double indicatorHeight = 8.0;
     const double spacingBelowIndicator = 12.0;
     final totalHeight =
@@ -167,8 +174,6 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
           );
         }
 
-        // If PageController was disposed and recreated, ensure it's up to date.
-        // This might be needed if the widget rebuilds significantly.
         if (!_featuredClusterPageController.hasClients && articles.isNotEmpty) {
           _featuredClusterPageController = PageController(
             initialPage: ref.read(featuredClusterPageIndexProvider),
@@ -221,7 +226,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                     },
                   ),
                 ),
-              if (articles.length <= 1) // Reserve space even if no indicator
+              if (articles.length <= 1)
                 const SizedBox(height: indicatorHeight + spacingBelowIndicator),
             ],
           ),
@@ -250,274 +255,242 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
     );
   }
 
-  Widget _buildStoryLinesPaginatedListSection(
+  Widget _buildStoryLinesSliverGrid(
     BuildContext context,
-    AsyncValue<List<dynamic>> paginatedClusterInfosAsync,
+    AsyncValue<List<ClusterInfo>> storyLinesAsync,
   ) {
-    final clusterNotifier = ref.read(paginatedClusterInfosProvider.notifier);
-    final currentUiPage = ref.watch(storyLinesCurrentPageProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isWeb = kIsWeb;
+    // Define a breakpoint for mobile-like layout on web, consistent with ClusterInfoGridItem
+    const mobileLayoutBreakpoint = 960.0;
 
-    return paginatedClusterInfosAsync.when(
+    int crossAxisCount;
+    double childAspectRatio;
+
+    if (isWeb) {
+      if (screenWidth > 1200) {
+        crossAxisCount = 4; // 1 row, 4 items (wide items)
+        childAspectRatio =
+            2.2; // Adjusted: Aim for good width for overlay layout
+      } else if (screenWidth > mobileLayoutBreakpoint) {
+        // Web tablet view (>960px)
+        crossAxisCount = 2; // 2x2 grid (landscape/square items)
+        childAspectRatio =
+            1.6; // Adjusted: Aim for good shape for overlay layout
+      } else {
+        // Web mobile view (<=960px)
+        crossAxisCount = 1; // List view, 1 item per row
+        // This uses the mobile-style card (image left, text right)
+        // Card height is roughly 80 (image) + 16 (padding) = 96.
+        // If cell width is screenWidth, aspect ratio = screenWidth / desired_cell_height.
+        // For a desired height of ~100-110px for the card to fit well:
+        // e.g., if screenWidth is 400, 400/100 = 4.0. If screenWidth is 600, 600/100 = 6.0
+        // Let's try a value that gives enough height for the card.
+        // If card height is ~100, and it takes full width (e.g. 320px on small phone)
+        // Aspect ratio = 320/100 = 3.2
+        // If on a 960px screen, width is ~900, height 100, aspect ratio = 9.
+        // This wide variation suggests that for single column list with fixed height items,
+        // childAspectRatio might not be the best. However, SliverGrid requires it.
+        // Let's try a value that gives reasonable height on average small web screens.
+        childAspectRatio =
+            3.5; // Increased to give more height if card is wider
+      }
+    } else {
+      // Native Mobile: List view, 1 item per row
+      crossAxisCount = 1;
+      // Mobile card height is approx 80 (image) + 16 (padding) = 96.
+      // Let cell height be around 100-110.
+      // childAspectRatio = cellWidth / cellHeight.
+      // cellWidth = screenWidth - 16*2 (horizontal padding of SliverPadding)
+      // e.g. (360-32)/110 = 2.98
+      // e.g. (400-32)/110 = 3.34
+      childAspectRatio = 3.0; // This seemed to work well for native mobile card
+    }
+
+    return storyLinesAsync.when(
       data: (allFetchedClusters) {
-        // We call ensureDataForStoryLinesPage in the main build method now.
-        // This ensures that by the time we get here with new `currentUiPage`,
-        // the fetching process (if needed) has already been initiated.
-        // The UI will reactively update once the new data is loaded into `allFetchedClusters`.
-
-        if (allFetchedClusters.isEmpty && !clusterNotifier.isLoadingMore) {
-          debugPrint(
-            "[Story Lines UI] All fetched clusters empty and not loading more.",
-          );
+        if (allFetchedClusters.isEmpty) {
           return const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 24.0),
-              child: Center(child: Text("No story lines available.")),
+            child: Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: Text('No story lines available at the moment.'),
+              ),
             ),
           );
         }
 
-        // Calculate items for the current UI page
+        final currentUiPage = ref.watch(storyLinesCurrentPageProvider);
+
         final startIndex = (currentUiPage - 1) * storyLinesPerPage;
         final endIndex = math.min(
           startIndex + storyLinesPerPage,
           allFetchedClusters.length,
         );
 
-        List<dynamic> currentPageDisplayItems = [];
+        List<ClusterInfo> currentPageDisplayItems = [];
         if (startIndex < allFetchedClusters.length && startIndex < endIndex) {
-          // Ensure startIndex is valid
           currentPageDisplayItems = allFetchedClusters.sublist(
             startIndex,
             endIndex,
           );
-        } else if (allFetchedClusters.isNotEmpty &&
-            startIndex >= allFetchedClusters.length &&
-            !clusterNotifier.hasMoreData) {
-          // If trying to access a page beyond available data and no more data is expected.
-          // This might happen if page was decremented from a higher number after data reduced.
-          // Or if ensureDataForStoryLinesPage hasn't completed a fetch that would satisfy this page yet.
-          debugPrint(
-            "[Story Lines UI] Current UI page $currentUiPage is beyond available data (${allFetchedClusters.length} items) and no more expected. Displaying empty or loading.",
-          );
-          // currentPageDisplayItems remains empty. Loading indicator or empty message will be shown by childCount logic.
         }
 
-        debugPrint(
-          "[Story Lines UI] Building for UI page $currentUiPage. Displaying items $startIndex-$endIndex from ${allFetchedClusters.length} buffered items. HasMoreBackend: ${clusterNotifier.hasMoreData}. IsLoadingMoreBackend: ${clusterNotifier.isLoadingMore}",
-        );
+        // This case handles if the sublist is empty but there are items (e.g. page out of bounds after refresh)
+        // Or if there are no items at all for the current page after filtering.
+        if (currentPageDisplayItems.isEmpty) {
+          // If it's not the first page or there are truly no items, show empty.
+          if (currentUiPage > 1 || allFetchedClusters.isEmpty) {
+            return const SliverToBoxAdapter(
+              child: SizedBox.shrink(),
+            ); // Or a message
+          }
+          // If it IS the first page, but somehow sublist is empty (e.g. bad data), also show empty.
+          // This check might be redundant if allFetchedClusters.isEmpty is handled above.
+          if (allFetchedClusters.isNotEmpty && startIndex == 0) {
+            return const SliverToBoxAdapter(
+              child: SizedBox.shrink(),
+            ); // Or a message
+          }
+        }
 
-        final totalFetchedItemsInBuffer =
-            clusterNotifier.totalFetchedClusterItems;
-        // Total displayable UI pages based on what's ALREADY in the buffer.
-        final totalDisplayableUiPagesInBuffer =
-            (totalFetchedItemsInBuffer / storyLinesPerPage).ceil();
-
-        // Next button is enabled if current UI page < total displayable ui pages OR if backend has more data.
-        final bool canGoNext =
-            currentUiPage < totalDisplayableUiPagesInBuffer ||
-            clusterNotifier.hasMoreData;
-        final bool canGoPrev = currentUiPage > 1;
-
-        // Determine child count for SliverList
-        int childCount = currentPageDisplayItems.length;
-        bool showPaginationControls =
-            (canGoPrev ||
-                canGoNext ||
-                (clusterNotifier.isLoadingMore &&
-                    currentPageDisplayItems.isEmpty));
-        bool showLoadingIndicatorAtEnd =
-            clusterNotifier.isLoadingMore && currentPageDisplayItems.isNotEmpty;
-
-        if (showPaginationControls) childCount++;
-        if (showLoadingIndicatorAtEnd) childCount++;
-
-        if (currentPageDisplayItems.isEmpty &&
-            !clusterNotifier.isLoadingMore &&
-            !clusterNotifier.hasMoreData &&
-            allFetchedClusters.isNotEmpty) {
-          // This case implies we are on a page that has no items, and no more are coming
-          // but there *were* items, so we should show pagination to go back.
-          // If allFetchedClusters is also empty, the top check handles "No story lines".
-        } else if (currentPageDisplayItems.isEmpty &&
-            clusterNotifier.isLoadingMore) {
-          // If current page is empty AND we are loading, just show loading indicator in place of items/pagination
-          return const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 32.0),
-              child: Center(
-                child: LoadingIndicator(key: Key("story_lines_page_loading")),
-              ),
+        return SliverPadding(
+          padding: EdgeInsets.symmetric(
+            horizontal: kIsWeb ? 24.0 : 16.0,
+            vertical: 8.0,
+          ),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: childAspectRatio,
+              crossAxisSpacing: kIsWeb ? 16.0 : 8.0,
+              mainAxisSpacing: kIsWeb ? 16.0 : 8.0,
             ),
-          );
-        }
-
-        return SliverList(
-          delegate: SliverChildBuilderDelegate((context, index) {
-            // Displaying items for the current UI page
-            if (index < currentPageDisplayItems.length) {
-              final cluster = currentPageDisplayItems[index];
-              return ClusterInfoListItem(cluster: cluster);
-            }
-            // Determine if this index is for pagination controls or loading indicator
-            int effectiveIndexAfterItems =
-                index - currentPageDisplayItems.length;
-
-            if (effectiveIndexAfterItems == 0 && showPaginationControls) {
-              // Pagination controls row
-              return Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.chevron_left),
-                      onPressed:
-                          canGoPrev
-                              ? () {
-                                ref
-                                    .read(
-                                      storyLinesCurrentPageProvider.notifier,
-                                    )
-                                    .state--;
-                              }
-                              : null,
-                      tooltip: "Previous Story Page",
-                    ),
-                    Text(
-                      "Page $currentUiPage${totalDisplayableUiPagesInBuffer > 0 && !clusterNotifier.hasMoreData ? ' of $totalDisplayableUiPagesInBuffer' : ''}",
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.chevron_right),
-                      onPressed:
-                          canGoNext
-                              ? () async {
-                                // Request data for the *next UI page* to be available
-                                // ensureDataForStoryLinesPage will trigger backend fetches if items for (currentUiPage + 1) are not buffered.
-                                await clusterNotifier
-                                    .ensureDataForStoryLinesPage(
-                                      currentUiPage + 1,
-                                    );
-                                // After ensuring data, if we can indeed advance (i.e., items for next page are now in buffer or were already there)
-                                if (mounted &&
-                                    (currentUiPage + 1) * storyLinesPerPage <=
-                                        clusterNotifier
-                                            .totalFetchedClusterItems) {
-                                  ref
-                                      .read(
-                                        storyLinesCurrentPageProvider.notifier,
-                                      )
-                                      .state++;
-                                } else if (mounted &&
-                                    !clusterNotifier.hasMoreData &&
-                                    currentUiPage * storyLinesPerPage >=
-                                        clusterNotifier
-                                            .totalFetchedClusterItems) {
-                                  // We are at the very end, no more data from backend, and no more buffered items for a new page.
-                                  debugPrint(
-                                    "[Story Lines UI] Next tapped, but at the absolute end.",
-                                  );
-                                } else if (mounted) {
-                                  // Data for next page might still be loading, or fetch failed. UI should reflect current state.
-                                  debugPrint(
-                                    "[Story Lines UI] Next tapped, ensureData called. Current items: ${clusterNotifier.totalFetchedClusterItems}. Waiting for UI to update if new items were fetched.",
-                                  );
-                                }
-                              }
-                              : null,
-                      tooltip: "Next Story Page",
-                    ),
-                  ],
-                ),
-              );
-            } else if (effectiveIndexAfterItems ==
-                    (showPaginationControls ? 1 : 0) &&
-                showLoadingIndicatorAtEnd) {
-              // Loading indicator at the very end of the list if applicable
-              return const Padding(
-                padding: EdgeInsets.symmetric(vertical: 16.0),
-                child: LoadingIndicator(key: Key("story_lines_end_loading")),
-              );
-            }
-            return null; // Should not be reached if childCount is correct
-          }, childCount: childCount),
+            delegate: SliverChildBuilderDelegate((context, index) {
+              final clusterInfo = currentPageDisplayItems[index];
+              return ClusterInfoGridItem(cluster: clusterInfo);
+            }, childCount: currentPageDisplayItems.length),
+          ),
         );
       },
       loading:
           () => const SliverToBoxAdapter(
-            // Initial loading for the whole section
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 32.0),
-              child: Center(
-                child: LoadingIndicator(
-                  key: Key("story_lines_initial_loading"),
-                ),
-              ),
-            ),
+            child: Center(child: LoadingIndicator()),
           ),
       error:
           (error, stack) => SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ErrorMessageWidget(
-                message: "Could not load story lines: $error",
-                onRetry: () {
-                  ref.invalidate(paginatedClusterInfosProvider);
-                  ref.read(storyLinesCurrentPageProvider.notifier).state = 1;
-                  // Ensure data for page 1 is re-fetched on retry
-                  ref
-                      .read(paginatedClusterInfosProvider.notifier)
-                      .ensureDataForStoryLinesPage(1);
-                },
-              ),
-            ),
+            child: ErrorMessageWidget(message: error.toString()),
           ),
+    );
+  }
+
+  Widget _buildStoryLinesPaginationControlsSliver(BuildContext context) {
+    final clusterNotifier = ref.read(paginatedClusterInfosProvider.notifier);
+    final currentUiPage = ref.watch(storyLinesCurrentPageProvider);
+    final paginatedClustersState = ref.watch(paginatedClusterInfosProvider);
+
+    final int totalFetchedItemsInBuffer = paginatedClustersState.maybeWhen(
+      data: (data) => clusterNotifier.totalFetchedClusterItems,
+      orElse: () => 0,
+    );
+
+    final totalDisplayableUiPagesInBuffer =
+        (totalFetchedItemsInBuffer / storyLinesPerPage).ceil();
+
+    final bool canGoNext =
+        currentUiPage < totalDisplayableUiPagesInBuffer ||
+        clusterNotifier.hasMoreData;
+    final bool canGoPrev = currentUiPage > 1;
+
+    if (totalFetchedItemsInBuffer == 0 && !clusterNotifier.isLoadingMore) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+    if (totalFetchedItemsInBuffer <= storyLinesPerPage &&
+        !clusterNotifier.hasMoreData &&
+        !clusterNotifier.isLoadingMore &&
+        !canGoPrev) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
+        child: Column(
+          children: [
+            if (clusterNotifier.isLoadingMore)
+              const Padding(
+                padding: EdgeInsets.only(bottom: 12.0),
+                child: LoadingIndicator(),
+              ),
+            if (canGoPrev || canGoNext)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (canGoPrev)
+                    ElevatedButton(
+                      onPressed: () {
+                        ref
+                            .read(storyLinesCurrentPageProvider.notifier)
+                            .state--;
+                      },
+                      child: const Text('Previous'),
+                    )
+                  else
+                    const SizedBox(width: 80),
+
+                  Text(
+                    'Page $currentUiPage',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+
+                  if (canGoNext)
+                    ElevatedButton(
+                      onPressed: () {
+                        ref
+                            .read(storyLinesCurrentPageProvider.notifier)
+                            .state++;
+                      },
+                      child: const Text('Next'),
+                    )
+                  else
+                    const SizedBox(width: 80),
+                ],
+              ),
+          ],
+        ),
+      ),
     );
   }
 
   Widget _buildOtherNewsTop8List(
     BuildContext context,
-    AsyncValue<List<ArticlePreview>> otherNewsTop8Async,
+    AsyncValue<List<ArticlePreview>>
+    otherNewsAsync, // Changed ClusterArticle to ArticlePreview
   ) {
-    final theme = Theme.of(context);
-
-    return otherNewsTop8Async.when(
-      data: (top8Articles) {
-        if (top8Articles.isEmpty && !otherNewsTop8Async.isLoading) {
-          return const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 24.0),
-              child: Center(child: Text("No other news available.")),
-            ),
-          );
+    return otherNewsAsync.when(
+      data: (articles) {
+        if (articles.isEmpty) {
+          return const SliverToBoxAdapter(child: SizedBox.shrink());
         }
-
         return SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) {
-              if (index < top8Articles.length) {
-                return Column(
-                  children: [
-                    OtherNewsListItem(article: top8Articles[index]),
-                    if (index < top8Articles.length - 1)
-                      Divider(
-                        height: 1,
-                        indent: 16,
-                        endIndent: 16,
-                        color: Colors.grey[200],
-                      ),
-                  ],
-                );
-              } else if (index == top8Articles.length &&
-                  top8Articles.isNotEmpty) {
+              if (index < articles.length) {
+                return OtherNewsListItem(article: articles[index]);
+              }
+              // Add the "More News" button after the last item
+              if (index == articles.length) {
                 return Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 12.0, 16.0, 16.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
                   child: Align(
                     alignment: Alignment.centerRight,
-                    child: InkWell(
-                      onTap: () {
-                        debugPrint(
-                          "See all News tapped - Navigating to AllNewsScreen",
-                        );
+                    child: TextButton.icon(
+                      icon: const Icon(Icons.arrow_forward_ios, size: 16),
+                      label: const Text("More News"),
+                      onPressed: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -525,43 +498,27 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                           ),
                         );
                       },
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4.0),
-                        child: Text(
-                          "See all News →",
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            color: theme.textTheme.bodyLarge?.color,
-                          ),
-                        ),
+                      style: TextButton.styleFrom(
+                        padding: EdgeInsets.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                       ),
                     ),
                   ),
                 );
               }
-              return null;
+              return null; // Should not happen
             },
-            childCount: top8Articles.length + (top8Articles.isNotEmpty ? 1 : 0),
+            childCount: articles.length + 1, // Add 1 for the button
           ),
         );
       },
       loading:
           () => const SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(vertical: 32.0),
-              child: Center(child: LoadingIndicator()),
-            ),
+            child: Center(child: LoadingIndicator()),
           ),
       error:
           (error, stack) => SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: ErrorMessageWidget(
-                message: "Could not load other news: $error",
-                onRetry: () {
-                  ref.invalidate(paginatedArticlesProvider(null));
-                },
-              ),
-            ),
+            child: ErrorMessageWidget(message: error.toString()),
           ),
     );
   }
