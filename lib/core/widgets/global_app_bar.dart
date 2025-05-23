@@ -13,14 +13,13 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
   // --- REMOVE teamId parameter ---
   // final String? teamId;
 
-  // Define constants for original heights and scale factor
-  static const double _originalImageHeightParam = 150.0;
+  // Update these constants for logo sizing
+  static const double _logoHeightParam = 150;
+  static const double _logoWidthParam = 200.0;
   static const double _webScaleFactor = 1.5;
 
   // Calculate web-specific heights
   static final double _webToolbarHeight = kToolbarHeight * _webScaleFactor;
-  static final double _webImageHeightParam =
-      _originalImageHeightParam * _webScaleFactor;
 
   const GlobalAppBar({
     super.key,
@@ -40,12 +39,17 @@ class GlobalAppBar extends ConsumerWidget implements PreferredSizeWidget {
     final bool isCurrentlyWeb = kIsWeb;
     final double currentToolbarHeight =
         isCurrentlyWeb ? _webToolbarHeight : kToolbarHeight;
-    final double currentImageHeightParam =
-        isCurrentlyWeb ? _webImageHeightParam : _originalImageHeightParam;
 
+    // Create a logo widget that scales appropriately
     final defaultTitle = Image.asset(
       'assets/images/logo.jpg',
-      height: currentImageHeightParam, // Use dynamic height
+      height:
+          isCurrentlyWeb
+              ? _logoHeightParam * _webScaleFactor
+              : _logoHeightParam,
+      width:
+          isCurrentlyWeb ? _logoWidthParam * _webScaleFactor : _logoWidthParam,
+      fit: BoxFit.contain,
     ); // Default app logo
 
     debugPrint(
