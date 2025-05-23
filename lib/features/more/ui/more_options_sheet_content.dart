@@ -6,7 +6,8 @@ import 'package:tackle_4_loss/features/settings/ui/settings_screen.dart';
 import 'package:tackle_4_loss/features/teams/ui/teams_screen.dart';
 // --- Import the new Standings Screen ---
 import 'package:tackle_4_loss/features/standings/ui/standings_screen.dart';
-// import 'package:url_launcher/url_launcher.dart'; // Keep commented for now
+// --- Import the Terms & Privacy Screen ---
+import 'package:tackle_4_loss/features/terms_privacy/ui/terms_privacy_screen.dart';
 
 class MoreOptionsSheetContent extends ConsumerWidget {
   const MoreOptionsSheetContent({super.key});
@@ -126,7 +127,9 @@ class MoreOptionsSheetContent extends ConsumerWidget {
               debugPrint('Standings tapped - Navigating to StandingsScreen');
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const StandingsScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const StandingsScreen(),
+                ),
               );
             },
           ),
@@ -143,6 +146,20 @@ class MoreOptionsSheetContent extends ConsumerWidget {
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
               );
               // --- End Navigation ---
+            },
+          ),
+          _buildMoreListItem(
+            context: context,
+            icon: Icons.privacy_tip_outlined,
+            title: 'Terms & Privacy',
+            onTap: () {
+              debugPrint('Terms & Privacy tapped');
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TermsPrivacyScreen(),
+                ),
+              );
             },
           ),
 
