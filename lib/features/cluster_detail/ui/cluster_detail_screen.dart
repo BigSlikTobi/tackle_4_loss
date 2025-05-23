@@ -9,6 +9,7 @@ import 'package:tackle_4_loss/features/cluster_detail/ui/widgets/cluster_timelin
 import 'package:tackle_4_loss/features/cluster_detail/ui/widgets/cluster_summary_widget.dart';
 // --- Import new tabs widget ---
 import 'package:tackle_4_loss/features/cluster_detail/ui/widgets/additional_views_tabs_widget.dart';
+import 'package:tackle_4_loss/core/widgets/web_detail_wrapper.dart'; // Import WebDetailWrapper
 
 class ClusterDetailScreen extends ConsumerWidget {
   final String clusterId;
@@ -22,87 +23,91 @@ class ClusterDetailScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: const GlobalAppBar(),
-      body: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // 1. Cluster Summary Section
-          Expanded(
-            child: summaryAsyncValue.when(
-              data: (summaryData) {
-                return ClusterSummaryWidget(summaryData: summaryData);
+      body: WebDetailWrapper(
+        // Wrap the body with WebDetailWrapper
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // 1. Cluster Summary Section
+            Expanded(
+              child: summaryAsyncValue.when(
+                data: (summaryData) {
+                  return ClusterSummaryWidget(summaryData: summaryData);
+                },
+                loading: () => const LoadingIndicator(),
+                error:
+                    (error, stack) => Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: ErrorMessageWidget(
+                        message:
+                            "Failed to load story summary: ${error.toString()}",
+                        onRetry:
+                            () => ref.invalidate(
+                              clusterSummaryProvider(clusterId),
+                            ),
+                      ),
+                    ),
+              ),
+            ),
+
+            // 2. Timeline Widget
+            timelineAsyncValue.when(
+              data: (timelineResponse) {
+                if (timelineResponse.timelineData.isNotEmpty) {
+                  return Column(
+                    children: [
+                      if (summaryAsyncValue is AsyncData ||
+                          (summaryAsyncValue is AsyncLoading &&
+                              timelineAsyncValue is AsyncData))
+                        const SizedBox(height: 8.0),
+                      const Divider(
+                        height: 1,
+                        indent: 0,
+                        endIndent: 0,
+                        thickness: 1,
+                      ),
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
+                        child: ClusterTimelineWidget(
+                          entries: timelineResponse.timelineData,
+                        ),
+                      ),
+                    ],
+                  );
+                }
+                return const SizedBox.shrink();
               },
-              loading: () => const LoadingIndicator(),
+              loading:
+                  () => const SizedBox(
+                    height: 60,
+                    child: Center(
+                      child: Text(
+                        "Loading timeline...",
+                        style: TextStyle(fontStyle: FontStyle.italic),
+                      ),
+                    ),
+                  ),
               error:
-                  (error, stack) => Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: ErrorMessageWidget(
-                      message:
-                          "Failed to load story summary: ${error.toString()}",
-                      onRetry:
-                          () =>
-                              ref.invalidate(clusterSummaryProvider(clusterId)),
+                  (error, stack) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      vertical: 8.0,
+                      horizontal: 16.0,
+                    ),
+                    alignment: Alignment.center,
+                    height: 60,
+                    color: Colors.red.withAlpha(13), // 0.05 * 255 ≈ 13
+                    child: Text(
+                      "Timeline error.",
+                      style: TextStyle(color: Colors.red[700], fontSize: 12),
+                      textAlign: TextAlign.center,
                     ),
                   ),
             ),
-          ),
 
-          // 2. Timeline Widget
-          timelineAsyncValue.when(
-            data: (timelineResponse) {
-              if (timelineResponse.timelineData.isNotEmpty) {
-                return Column(
-                  children: [
-                    if (summaryAsyncValue is AsyncData ||
-                        (summaryAsyncValue is AsyncLoading &&
-                            timelineAsyncValue is AsyncData))
-                      const SizedBox(height: 8.0),
-                    const Divider(
-                      height: 1,
-                      indent: 0,
-                      endIndent: 0,
-                      thickness: 1,
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0, bottom: 8.0),
-                      child: ClusterTimelineWidget(
-                        entries: timelineResponse.timelineData,
-                      ),
-                    ),
-                  ],
-                );
-              }
-              return const SizedBox.shrink();
-            },
-            loading:
-                () => const SizedBox(
-                  height: 60,
-                  child: Center(
-                    child: Text(
-                      "Loading timeline...",
-                      style: TextStyle(fontStyle: FontStyle.italic),
-                    ),
-                  ),
-                ),
-            error:
-                (error, stack) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    vertical: 8.0,
-                    horizontal: 16.0,
-                  ),
-                  alignment: Alignment.center,
-                  height: 60,
-                  color: Colors.red.withAlpha(13), // 0.05 * 255 ≈ 13
-                  child: Text(
-                    "Timeline error.",
-                    style: TextStyle(color: Colors.red[700], fontSize: 12),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-          ),
-
-          // 3. Additional Views Tabs (Replaces "Tabs coming soon" placeholder)
-          AdditionalViewsTabsWidget(clusterId: clusterId),
-        ],
+            // 3. Additional Views Tabs (Replaces "Tabs coming soon" placeholder)
+            AdditionalViewsTabsWidget(clusterId: clusterId),
+          ],
+        ),
       ),
     );
   }

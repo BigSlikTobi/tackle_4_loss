@@ -217,7 +217,14 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                         .where((a) => a.id != headlineArticle?.id)
                         .toList();
 
-                if (headlineArticle == null && listArticlesToShow.isEmpty) {
+                // --- Determine if loading next page ---
+                final isLoadingNextPage =
+                    articlesAsyncValue.isLoading &&
+                    (headlineArticle != null || listArticlesToShow.isNotEmpty);
+
+                if (headlineArticle == null &&
+                    listArticlesToShow.isEmpty &&
+                    !isLoadingNextPage) {
                   if (articlesAsyncValue.isLoading) {
                     return const LoadingIndicator();
                   } else {
@@ -251,8 +258,9 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                       SliverToBoxAdapter(
                         child: InkWell(
                           onTap:
-                              () =>
-                                  navigateToArticleDetail(headlineArticle!.id),
+                              () => navigateToArticleDetail(
+                                headlineArticle!.id,
+                              ), // Added null assertion operator
                           child: HeadlineStoryCard(article: headlineArticle),
                         ),
                       ),
@@ -265,44 +273,39 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            if (index == listArticlesToShow.length) {
-                              if (articlesAsyncValue.isLoading &&
-                                  listArticlesToShow.isNotEmpty) {
-                                return const Padding(
-                                  padding: EdgeInsets.all(16.0),
-                                  child: LoadingIndicator(),
-                                );
-                              } else {
-                                return const SizedBox.shrink();
-                              }
+                            // --- Show loading indicator at the end ---
+                            if (index == listArticlesToShow.length &&
+                                isLoadingNextPage) {
+                              return const Padding(
+                                padding: EdgeInsets.symmetric(vertical: 16.0),
+                                child: Center(child: LoadingIndicator()),
+                              );
                             }
-                            return ArticleListItem(
-                              article: listArticlesToShow[index],
-                              onTap: () {
-                                debugPrint(
-                                  'AllNewsScreen: Navigating to detail for articleId: \\${listArticlesToShow[index].id}',
-                                );
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder:
-                                        (context) => ArticleDetailScreen(
-                                          articleId:
-                                              listArticlesToShow[index].id,
-                                        ),
-                                  ),
-                                );
-                              },
-                            );
+                            if (index < listArticlesToShow.length) {
+                              final article = listArticlesToShow[index];
+                              return ArticleListItem(
+                                article: article,
+                                onTap:
+                                    () => navigateToArticleDetail(article.id),
+                              );
+                            }
+                            return null; // Should not happen with correct childCount
                           },
+                          // --- Adjust childCount for loading indicator ---
                           childCount:
                               listArticlesToShow.length +
-                              ((articlesAsyncValue.isLoading &&
-                                      listArticlesToShow.isNotEmpty)
-                                  ? 1
-                                  : 0),
+                              (isLoadingNextPage ? 1 : 0),
                         ),
                       ),
                     ),
+                    // --- Add a fallback loading indicator if the list is empty but loading more ---
+                    if (headlineArticle == null &&
+                        listArticlesToShow.isEmpty &&
+                        isLoadingNextPage)
+                      const SliverFillRemaining(
+                        hasScrollBody: false,
+                        child: Center(child: LoadingIndicator()),
+                      ),
                   ],
                 );
               },

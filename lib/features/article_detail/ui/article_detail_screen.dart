@@ -19,6 +19,7 @@ import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
 // Import AppColors for consistent theming
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
+import 'package:tackle_4_loss/core/widgets/web_detail_wrapper.dart'; // Import WebDetailWrapper
 
 class ArticleDetailScreen extends ConsumerWidget {
   final int articleId;
@@ -109,199 +110,206 @@ class ArticleDetailScreen extends ConsumerWidget {
         ),
       ),
       // Apply responsive layout to body content
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-          child: articleAsyncValue.when(
-            loading: () => const Center(child: LoadingIndicator()),
-            error:
-                (error, stackTrace) => Padding(
-                  // Add padding around error msg
-                  padding: const EdgeInsets.all(16.0),
-                  child: ErrorMessageWidget(
-                    message:
-                        'Failed to load article details.\n${error.toString()}',
-                    // Retry still invalidates the provider
-                    onRetry:
-                        () => ref.invalidate(articleDetailProvider(articleId)),
+      body: WebDetailWrapper(
+        // Wrap the body's content
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              maxWidth: kMaxContentWidth,
+            ), // This might be redundant if WebDetailWrapper handles it
+            child: articleAsyncValue.when(
+              loading: () => const Center(child: LoadingIndicator()),
+              error:
+                  (error, stackTrace) => Padding(
+                    // Add padding around error msg
+                    padding: const EdgeInsets.all(16.0),
+                    child: ErrorMessageWidget(
+                      message:
+                          'Failed to load article details.\n${error.toString()}',
+                      // Retry still invalidates the provider
+                      onRetry:
+                          () =>
+                              ref.invalidate(articleDetailProvider(articleId)),
+                    ),
                   ),
-                ),
-            data: (article) {
-              final localeCode = currentLocale.languageCode;
-              final headline = article.getLocalizedHeadline(localeCode);
-              final htmlContent = article.getLocalizedContent(localeCode);
-              final primaryImageUrl = article.primaryImageUrl;
-              final sourceUri =
-                  article.sourceUrl != null
-                      ? Uri.tryParse(article.sourceUrl!)
-                      : null;
+              data: (article) {
+                final localeCode = currentLocale.languageCode;
+                final headline = article.getLocalizedHeadline(localeCode);
+                final htmlContent = article.getLocalizedContent(localeCode);
+                final primaryImageUrl = article.primaryImageUrl;
+                final sourceUri =
+                    article.sourceUrl != null
+                        ? Uri.tryParse(article.sourceUrl!)
+                        : null;
 
-              // --- Content is wrapped in SingleChildScrollView ---
-              return SingleChildScrollView(
-                // Add padding here for the content area
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 16.0,
-                  vertical: 12.0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Include article title at the top of the content for clarity
-                    // This way we keep the app logo in the AppBar but still prominently show the title
-                    Text(
-                      headline,
-                      style: textTheme.headlineMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-
-                    // 1. Primary Image
-                    if (primaryImageUrl != null)
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 16.0),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(12.0),
-                          child: CachedNetworkImage(
-                            imageUrl: primaryImageUrl,
-                            fit: BoxFit.cover,
-                            width: double.infinity,
-                            placeholder:
-                                (context, url) => Container(
-                                  height: 250,
-                                  color: Colors.grey[200],
-                                  child: const Center(
-                                    child: LoadingIndicator(),
-                                  ),
-                                ),
-                            errorWidget:
-                                (context, url, error) => Container(
-                                  height: 250,
-                                  color: Colors.grey[200],
-                                  child: Icon(
-                                    Icons.broken_image_outlined,
-                                    color: Colors.grey[500],
-                                    size: 40,
-                                  ),
-                                ),
-                          ),
-                        ),
-                      ),
-                    const SizedBox(height: 8),
-
-                    // Skip repeating headline as we added it at the top
-
-                    // 3. Source & Date Row
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            article.sourceName ?? 'Unknown Source',
-                            style: textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                              fontStyle: FontStyle.italic,
-                            ),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        if (article.createdAt != null)
-                          Text(
-                            DateFormat.yMMMd(
-                              localeCode,
-                            ).format(article.createdAt!),
-                            style: textTheme.bodySmall?.copyWith(
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    const Divider(),
-                    const SizedBox(height: 16),
-
-                    // 4. Content
-                    if (htmlContent != null && htmlContent.isNotEmpty)
-                      Html(
-                        data: htmlContent,
-                        style: {
-                          "body": Style(
-                            fontSize: FontSize(
-                              textTheme.bodyLarge?.fontSize ?? 16.0,
-                            ),
-                            color: textTheme.bodyLarge?.color,
-                            lineHeight: LineHeight(
-                              textTheme.bodyLarge?.height ?? 1.5,
-                            ),
-                            margin: Margins.zero,
-                            padding: HtmlPaddings.zero,
-                          ),
-                          "p": Style(margin: Margins.only(bottom: 12.0)),
-                          "a": Style(
-                            color: theme.colorScheme.primary,
-                            textDecoration: TextDecoration.underline,
-                          ),
-                          "h1": Style(
-                            fontSize: FontSize(
-                              textTheme.headlineSmall?.fontSize ?? 20.0,
-                            ),
-                            fontWeight: textTheme.headlineSmall?.fontWeight,
-                            margin: Margins.symmetric(vertical: 10.0),
-                          ),
-                          "h2": Style(
-                            fontSize: FontSize(
-                              textTheme.titleLarge?.fontSize ?? 18.0,
-                            ),
-                            fontWeight: textTheme.titleLarge?.fontWeight,
-                            margin: Margins.symmetric(vertical: 8.0),
-                          ),
-                        },
-                        onLinkTap: (url, attributes, element) {
-                          if (url != null) {
-                            final uri = Uri.tryParse(url);
-                            if (uri != null) {
-                              _launchUrl(uri, context, ref);
-                            } else {
-                              debugPrint(
-                                "Could not parse URL from HTML link: $url",
-                              );
-                            }
-                          }
-                        },
-                      )
-                    else
+                // --- Content is wrapped in SingleChildScrollView ---
+                return SingleChildScrollView(
+                  // Add padding here for the content area
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 12.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Include article title at the top of the content for clarity
+                      // This way we keep the app logo in the AppBar but still prominently show the title
                       Text(
-                        'Article content is not available.',
-                        style: textTheme.bodyLarge?.copyWith(
-                          fontStyle: FontStyle.italic,
-                          color: Colors.grey[600],
+                        headline,
+                        style: textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    const SizedBox(height: 24),
+                      const SizedBox(height: 8),
 
-                    // 5. Source Link Button
-                    if (sourceUri != null && article.sourceUrl != null)
-                      Center(
-                        child: TextButton.icon(
-                          icon: const Icon(Icons.open_in_browser, size: 18),
-                          label: Text(
-                            'Read Full Article at ${article.sourceName ?? 'Source'}',
-                          ),
-                          onPressed: () => _launchUrl(sourceUri, context, ref),
-                          style: TextButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 10,
+                      // 1. Primary Image
+                      if (primaryImageUrl != null)
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 16.0),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12.0),
+                            child: CachedNetworkImage(
+                              imageUrl: primaryImageUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              placeholder:
+                                  (context, url) => Container(
+                                    height: 250,
+                                    color: Colors.grey[200],
+                                    child: const Center(
+                                      child: LoadingIndicator(),
+                                    ),
+                                  ),
+                              errorWidget:
+                                  (context, url, error) => Container(
+                                    height: 250,
+                                    color: Colors.grey[200],
+                                    child: Icon(
+                                      Icons.broken_image_outlined,
+                                      color: Colors.grey[500],
+                                      size: 40,
+                                    ),
+                                  ),
                             ),
                           ),
                         ),
+                      const SizedBox(height: 8),
+
+                      // Skip repeating headline as we added it at the top
+
+                      // 3. Source & Date Row
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Flexible(
+                            child: Text(
+                              article.sourceName ?? 'Unknown Source',
+                              style: textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                                fontStyle: FontStyle.italic,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          if (article.createdAt != null)
+                            Text(
+                              DateFormat.yMMMd(
+                                localeCode,
+                              ).format(article.createdAt!),
+                              style: textTheme.bodySmall?.copyWith(
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                        ],
                       ),
-                    const SizedBox(height: 20),
-                  ],
-                ),
-              );
-            },
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
+
+                      // 4. Content
+                      if (htmlContent != null && htmlContent.isNotEmpty)
+                        Html(
+                          data: htmlContent,
+                          style: {
+                            "body": Style(
+                              fontSize: FontSize(
+                                textTheme.bodyLarge?.fontSize ?? 16.0,
+                              ),
+                              color: textTheme.bodyLarge?.color,
+                              lineHeight: LineHeight(
+                                textTheme.bodyLarge?.height ?? 1.5,
+                              ),
+                              margin: Margins.zero,
+                              padding: HtmlPaddings.zero,
+                            ),
+                            "p": Style(margin: Margins.only(bottom: 12.0)),
+                            "a": Style(
+                              color: theme.colorScheme.primary,
+                              textDecoration: TextDecoration.underline,
+                            ),
+                            "h1": Style(
+                              fontSize: FontSize(
+                                textTheme.headlineSmall?.fontSize ?? 20.0,
+                              ),
+                              fontWeight: textTheme.headlineSmall?.fontWeight,
+                              margin: Margins.symmetric(vertical: 10.0),
+                            ),
+                            "h2": Style(
+                              fontSize: FontSize(
+                                textTheme.titleLarge?.fontSize ?? 18.0,
+                              ),
+                              fontWeight: textTheme.titleLarge?.fontWeight,
+                              margin: Margins.symmetric(vertical: 8.0),
+                            ),
+                          },
+                          onLinkTap: (url, attributes, element) {
+                            if (url != null) {
+                              final uri = Uri.tryParse(url);
+                              if (uri != null) {
+                                _launchUrl(uri, context, ref);
+                              } else {
+                                debugPrint(
+                                  "Could not parse URL from HTML link: $url",
+                                );
+                              }
+                            }
+                          },
+                        )
+                      else
+                        Text(
+                          'Article content is not available.',
+                          style: textTheme.bodyLarge?.copyWith(
+                            fontStyle: FontStyle.italic,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      const SizedBox(height: 24),
+
+                      // 5. Source Link Button
+                      if (sourceUri != null && article.sourceUrl != null)
+                        Center(
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.open_in_browser, size: 18),
+                            label: Text(
+                              'Read Full Article at ${article.sourceName ?? 'Source'}',
+                            ),
+                            onPressed:
+                                () => _launchUrl(sourceUri, context, ref),
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 10,
+                              ),
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                );
+              },
+            ),
           ),
         ),
       ),
