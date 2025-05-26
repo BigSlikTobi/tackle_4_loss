@@ -1,8 +1,7 @@
 // File: lib/features/cluster_detail/logic/cluster_detail_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/features/cluster_detail/data/cluster_detail_service.dart';
-import 'package:tackle_4_loss/features/cluster_detail/data/cluster_timeline_response.dart';
-import 'package:tackle_4_loss/features/cluster_detail/data/cluster_timeline_entry.dart';
+
 import 'package:tackle_4_loss/features/cluster_detail/data/cluster_summary_data.dart';
 // --- Import new models ---
 import 'package:tackle_4_loss/features/cluster_detail/data/single_view_data.dart';
@@ -24,19 +23,6 @@ final clusterDetailServiceProvider = Provider<ClusterDetailService>((ref) {
 });
 
 // --- Existing Providers ---
-final clusterTimelineProvider =
-    FutureProvider.family<ClusterTimelineResponse, String>((
-      ref,
-      clusterId,
-    ) async {
-      final service = ref.watch(clusterDetailServiceProvider);
-      return service.getClusterTimeline(clusterId);
-    });
-
-final selectedTimelineEntryProvider = StateProvider<ClusterTimelineEntry?>(
-  (ref) => null,
-);
-
 final clusterSummaryProvider =
     FutureProvider.family<ClusterSummaryData, String>((ref, clusterId) async {
       final service = ref.watch(clusterDetailServiceProvider);
