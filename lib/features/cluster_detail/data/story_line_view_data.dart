@@ -33,7 +33,7 @@ class StoryLineViewData {
 
   @override
   String toString() {
-    return 'StoryLineViewData(headline: $headline, introduction: $introduction, content: ${content.length > 50 ? content.substring(0, 50) + '...' : content}, language: $language)';
+    return 'StoryLineViewData(headline: $headline, introduction: $introduction, content: ${content.length > 50 ? '${content.substring(0, 50)}...' : content}, language: $language)';
   }
 }
 

@@ -12,6 +12,8 @@ import 'package:tackle_4_loss/features/more/ui/more_options_sheet_content.dart';
 // --- Import Layout Constants ---
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
+// --- Import Beta Banner ---
+import 'package:tackle_4_loss/core/widgets/beta_banner.dart';
 
 class MainNavigationWrapper extends ConsumerWidget {
   const MainNavigationWrapper({super.key});
@@ -78,71 +80,79 @@ class MainNavigationWrapper extends ConsumerWidget {
           leading: null, // No menu button on mobile
           actions: const [], // No actions needed on main mobile bar
         ),
-        bottomNavigationBar: BottomNavigationBar(
-          currentIndex: selectedIndex,
-          onTap: (index) {
-            if (index == moreItemIndex) {
-              _showMoreOptions(context);
-            } else {
-              ref.read(currentDetailArticleIdProvider.notifier).state = null;
-              ref.read(selectedNavIndexProvider.notifier).state = index;
-            }
-          },
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          items:
-              appNavItems.map((item) {
-                // If this is the "My Team" item and user has a selected team, show team logo
-                if (item.label == 'My Team' && selectedTeam != null) {
-                  return BottomNavigationBarItem(
-                    icon: SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: Image.asset(
-                        getTeamLogoPath(selectedTeam),
-                        errorBuilder: (context, error, stackTrace) {
-                          // Fallback to default icon if team logo can't be loaded
-                          return item.assetIconPath != null
-                              ? Image.asset(
-                                item.assetIconPath!,
-                                height: 24,
-                                width: 24,
-                              )
-                              : Icon(item.icon);
-                        },
-                      ),
-                    ),
-                    label: '', // Keep labels empty
-                  );
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Beta banner above bottom navigation on mobile
+            const BetaBanner(),
+            BottomNavigationBar(
+              currentIndex: selectedIndex,
+              onTap: (index) {
+                if (index == moreItemIndex) {
+                  _showMoreOptions(context);
+                } else {
+                  ref.read(currentDetailArticleIdProvider.notifier).state =
+                      null;
+                  ref.read(selectedNavIndexProvider.notifier).state = index;
                 }
-                // Use asset icon if provided
-                if (item.assetIconPath != null) {
-                  return BottomNavigationBarItem(
-                    icon: SizedBox(
-                      height: 24,
-                      width: 24,
-                      child: Image.asset(
-                        item.assetIconPath!,
-                        fit: BoxFit.contain,
-                        errorBuilder:
-                            (context, error, stackTrace) =>
-                                item.icon != null
-                                    ? Icon(item.icon)
-                                    : const Icon(Icons.help_outline),
-                      ),
-                    ),
-                    label: '',
-                  );
-                }
-                // Fallback to IconData
-                return BottomNavigationBarItem(
-                  icon: Icon(item.icon),
-                  label: '',
-                );
-              }).toList(),
-          type: BottomNavigationBarType.fixed,
-          selectedItemColor: Theme.of(context).colorScheme.primary,
-          unselectedItemColor: Colors.grey[600],
+              },
+              showSelectedLabels: false,
+              showUnselectedLabels: false,
+              items:
+                  appNavItems.map((item) {
+                    // If this is the "My Team" item and user has a selected team, show team logo
+                    if (item.label == 'My Team' && selectedTeam != null) {
+                      return BottomNavigationBarItem(
+                        icon: SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: Image.asset(
+                            getTeamLogoPath(selectedTeam),
+                            errorBuilder: (context, error, stackTrace) {
+                              // Fallback to default icon if team logo can't be loaded
+                              return item.assetIconPath != null
+                                  ? Image.asset(
+                                    item.assetIconPath!,
+                                    height: 24,
+                                    width: 24,
+                                  )
+                                  : Icon(item.icon);
+                            },
+                          ),
+                        ),
+                        label: '', // Keep labels empty
+                      );
+                    }
+                    // Use asset icon if provided
+                    if (item.assetIconPath != null) {
+                      return BottomNavigationBarItem(
+                        icon: SizedBox(
+                          height: 24,
+                          width: 24,
+                          child: Image.asset(
+                            item.assetIconPath!,
+                            fit: BoxFit.contain,
+                            errorBuilder:
+                                (context, error, stackTrace) =>
+                                    item.icon != null
+                                        ? Icon(item.icon)
+                                        : const Icon(Icons.help_outline),
+                          ),
+                        ),
+                        label: '',
+                      );
+                    }
+                    // Fallback to IconData
+                    return BottomNavigationBarItem(
+                      icon: Icon(item.icon),
+                      label: '',
+                    );
+                  }).toList(),
+              type: BottomNavigationBarType.fixed,
+              selectedItemColor: Theme.of(context).colorScheme.primary,
+              unselectedItemColor: Colors.grey[600],
+            ),
+          ],
         ),
         body: bodyContent, // This is the IndexedStack
       );
@@ -275,11 +285,20 @@ class MainNavigationWrapper extends ConsumerWidget {
           ),
         ),
         // --- Apply layout constraints to body ---
-        body: Center(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-            child: bodyContent, // This is the IndexedStack
-          ),
+        body: Column(
+          children: [
+            // Main content area
+            Expanded(
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
+                  child: bodyContent, // This is the IndexedStack
+                ),
+              ),
+            ),
+            // Beta banner at bottom for desktop/web
+            const BetaBanner(),
+          ],
         ),
       );
     }

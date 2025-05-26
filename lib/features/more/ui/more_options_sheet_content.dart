@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart';
 import 'package:tackle_4_loss/features/settings/ui/settings_screen.dart';
 // --- Import the new Teams Screen ---
@@ -73,6 +74,29 @@ class MoreOptionsSheetContent extends ConsumerWidget {
           onPressed, // Keep simple for now, handle dismiss/URL outside if needed
       color: Colors.grey[700], // Give social icons a distinct color
     );
+  }
+
+  // --- Helper method to launch Discord URL ---
+  Future<void> _launchDiscord(BuildContext context) async {
+    final Uri discordUrl = Uri.parse('https://discord.gg/PfvQdPVh');
+    try {
+      if (await canLaunchUrl(discordUrl)) {
+        await launchUrl(discordUrl, mode: LaunchMode.externalApplication);
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Could not open Discord link')),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error launching Discord URL: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Error opening Discord link')),
+        );
+      }
+    }
   }
 
   @override
@@ -182,36 +206,8 @@ class MoreOptionsSheetContent extends ConsumerWidget {
                     icon: Icons.discord,
                     tooltip: 'Join our Discord',
                     onPressed: () {
-                      debugPrint('Discord tapped');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Launch Discord (Not Implemented)'),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildSocialButton(
-                    icon: Icons.camera_alt_outlined,
-                    tooltip: 'Follow us on Instagram',
-                    onPressed: () {
-                      debugPrint('Instagram tapped');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Launch Instagram (Not Implemented)'),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildSocialButton(
-                    icon: Icons.play_circle_outline,
-                    tooltip: 'Subscribe on YouTube',
-                    onPressed: () {
-                      debugPrint('YouTube tapped');
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Launch YouTube (Not Implemented)'),
-                        ),
-                      );
+                      debugPrint('Discord tapped - Opening Discord channel');
+                      _launchDiscord(context);
                     },
                   ),
                 ],

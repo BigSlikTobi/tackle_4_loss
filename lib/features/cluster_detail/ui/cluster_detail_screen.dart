@@ -143,12 +143,12 @@ final _showFullContentProvider = StateProvider.autoDispose<bool>(
 );
 
 String _stripHtml(String htmlText) {
-  final RegExp BARE_TAGS = RegExp(
+  final RegExp bareTags = RegExp(
     r'<[^>]*>',
     multiLine: true,
     caseSensitive: true,
   );
-  return htmlText.replaceAll(BARE_TAGS, '');
+  return htmlText.replaceAll(bareTags, '');
 }
 
 class ClusterDetailScreen extends ConsumerWidget {
@@ -215,8 +215,8 @@ class ClusterDetailScreen extends ConsumerWidget {
   }) {
     final theme = Theme.of(context);
     // Use primary color for non-selected, slightly brighter/different for selected
-    final dotColor = theme.colorScheme.primary.withOpacity(
-      0.75,
+    final dotColor = theme.colorScheme.primary.withAlpha(
+      191, // 0.75 * 255 = 191.25 ≈ 191
     ); // Base primary color for dots
     final selectedDotColor =
         theme.colorScheme.primary; // Full primary for selected
@@ -238,11 +238,15 @@ class ClusterDetailScreen extends ConsumerWidget {
           border:
               isSelected
                   ? Border.all(
-                    color: theme.colorScheme.onPrimary.withOpacity(0.8),
+                    color: theme.colorScheme.onPrimary.withAlpha(
+                      204,
+                    ), // 0.8 * 255 = 204
                     width: 1.5,
                   ) // Border for selected
                   : Border.all(
-                    color: theme.colorScheme.primary.withOpacity(0.5),
+                    color: theme.colorScheme.primary.withAlpha(
+                      128,
+                    ), // 0.5 * 255 = 127.5 ≈ 128
                     width: 0.5,
                   ), // Subtle border for non-selected
           boxShadow: [
@@ -254,7 +258,7 @@ class ClusterDetailScreen extends ConsumerWidget {
             ),
             BoxShadow(
               // Inner subtle shadow for depth if desired
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withAlpha(25), // 0.1 * 255 = 25.5 ≈ 25
               blurRadius: 2.0,
               spreadRadius: 0.5,
               offset: const Offset(1, 1),
@@ -305,7 +309,7 @@ class ClusterDetailScreen extends ConsumerWidget {
           ref.read(_overlayContentProvider.notifier).state = null;
         },
         child: Container(
-          color: Colors.black.withOpacity(0.75),
+          color: Colors.black.withAlpha(191), // 0.75 * 255 = 191.25 ≈ 191
           child: Center(
             child: GestureDetector(
               onTap: () {}, // To prevent taps on content from closing overlay
@@ -323,7 +327,7 @@ class ClusterDetailScreen extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(16.0),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withAlpha(51), // 0.2 * 255 = 51
                       blurRadius: 10,
                       offset: const Offset(0, 5),
                     ),
@@ -547,25 +551,22 @@ class ClusterDetailScreen extends ConsumerWidget {
                                                 };
                                               },
                                             ),
-                                          ...storyDetail.views
-                                              .map(
-                                                (view) => _buildDot(
-                                                  context,
-                                                  isSelected:
-                                                      overlayState?['type'] ==
-                                                          'view' &&
-                                                      overlayState?['id'] ==
-                                                          view.id,
-                                                  onTap:
-                                                      () => _handleViewDotTap(
-                                                        ref,
-                                                        view.id,
-                                                        currentLocale
-                                                            .languageCode,
-                                                      ),
-                                                ),
-                                              )
-                                              .toList(),
+                                          ...storyDetail.views.map(
+                                            (view) => _buildDot(
+                                              context,
+                                              isSelected:
+                                                  overlayState?['type'] ==
+                                                      'view' &&
+                                                  overlayState?['id'] ==
+                                                      view.id,
+                                              onTap:
+                                                  () => _handleViewDotTap(
+                                                    ref,
+                                                    view.id,
+                                                    currentLocale.languageCode,
+                                                  ),
+                                            ),
+                                          ),
                                         ],
                                       ),
                                     ),
@@ -737,8 +738,6 @@ class ClusterDetailScreen extends ConsumerWidget {
           },
           loading: () => const Center(child: LoadingIndicator()),
           error: (err, stack) {
-            print("StoryLineDetail Error: $err");
-            print(stack);
             return Center(
               child: ErrorMessageWidget(
                 message: "Failed to load details: ${err.toString()}",

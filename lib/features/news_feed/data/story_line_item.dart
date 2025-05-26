@@ -58,8 +58,8 @@ class StoryLinesResponse {
     final dataList = json['data'] as List<dynamic>? ?? [];
     final storyLines =
         dataList
-            .where((item) => item is Map<String, dynamic>)
-            .map((item) => StoryLineItem.fromJson(item as Map<String, dynamic>))
+            .whereType<Map<String, dynamic>>()
+            .map((item) => StoryLineItem.fromJson(item))
             .toList();
 
     final paginationData = json['pagination'] as Map<String, dynamic>? ?? {};
