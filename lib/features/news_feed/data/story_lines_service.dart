@@ -24,13 +24,13 @@ class StoryLinesService {
     debugPrint("=== STORY LINES DEBUG START ===");
     debugPrint("[StoryLinesService] Platform: ${kIsWeb ? 'Web' : 'Mobile'}");
     debugPrint(
-      "[StoryLinesService] Default Target Platform: ${defaultTargetPlatform}",
+      "[StoryLinesService] Default Target Platform: $defaultTargetPlatform",
     );
 
     // Check Supabase client configuration
     final clientStr = _supabaseClient.toString();
     debugPrint(
-      "[StoryLinesService] Supabase Client configured: ${clientStr.length > 50 ? clientStr.substring(0, 50) + '...' : clientStr}",
+      "[StoryLinesService] Supabase Client configured: ${clientStr.length > 50 ? '${clientStr.substring(0, 50)}...' : clientStr}",
     );
 
     debugPrint(

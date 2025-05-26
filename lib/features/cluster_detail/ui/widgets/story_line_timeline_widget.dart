@@ -144,7 +144,9 @@ class _StoryLineTimelineWidgetState
                 child: Container(
                   height: 1,
                   decoration: BoxDecoration(
-                    color: theme.colorScheme.onSurface.withOpacity(0.3),
+                    color: theme.colorScheme.onSurface.withAlpha(
+                      76,
+                    ), // 0.3 * 255 = 76.5 ≈ 76
                     borderRadius: BorderRadius.circular(1),
                   ),
                 ),
@@ -173,7 +175,7 @@ class _StoryLineTimelineWidgetState
                           end: Alignment.centerRight,
                           colors: [
                             Colors.transparent,
-                            theme.canvasColor.withOpacity(0.8),
+                            theme.canvasColor.withAlpha(204), // 0.8 * 255 = 204
                           ],
                         ),
                       ),
@@ -254,7 +256,9 @@ class _TimelineDot extends StatelessWidget {
     final Color dotColor =
         isSelected
             ? theme.colorScheme.primary
-            : theme.colorScheme.onSurface.withOpacity(0.7);
+            : theme.colorScheme.onSurface.withAlpha(
+              178,
+            ); // 0.7 * 255 = 178.5 ≈ 178
 
     return InkWell(
       onTap: onTap,
@@ -270,7 +274,9 @@ class _TimelineDot extends StatelessWidget {
             border: Border.all(
               color:
                   isSelected
-                      ? theme.colorScheme.onPrimary.withOpacity(0.9)
+                      ? theme.colorScheme.onPrimary.withAlpha(
+                        230,
+                      ) // 0.9 * 255 = 229.5 ≈ 230
                       : Colors.transparent,
               width: isSelected ? 1.0 : 0,
             ),
@@ -278,8 +284,10 @@ class _TimelineDot extends StatelessWidget {
               BoxShadow(
                 color:
                     isSelected
-                        ? theme.colorScheme.primary.withOpacity(0.5)
-                        : Colors.black.withOpacity(0.15),
+                        ? theme.colorScheme.primary.withAlpha(
+                          128,
+                        ) // 0.5 * 255 = 127.5 ≈ 128
+                        : Colors.black.withAlpha(38), // 0.15 * 255 = 38.25 ≈ 38
                 blurRadius: isSelected ? 10.0 : 4.0,
                 spreadRadius: isSelected ? 3.0 : 1.0,
               ),

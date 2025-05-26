@@ -42,7 +42,7 @@ class PaginatedStoryLinesNotifier extends AsyncNotifier<List<StoryLineItem>> {
       "[PaginatedStoryLinesNotifier] Platform: ${kIsWeb ? 'Web' : 'Mobile'}",
     );
     debugPrint(
-      "[PaginatedStoryLinesNotifier] Default Target Platform: ${defaultTargetPlatform}",
+      "[PaginatedStoryLinesNotifier] Default Target Platform: $defaultTargetPlatform",
     );
     debugPrint("[PaginatedStoryLinesNotifier] Language Code: $languageCode");
 

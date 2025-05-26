@@ -135,7 +135,9 @@ class _NflHeadlineItemCardState extends ConsumerState<NflHeadlineItemCard>
                   shadows: [
                     Shadow(
                       blurRadius: 3.0,
-                      color: Colors.black.withOpacity(0.7),
+                      color: Colors.black.withAlpha(
+                        179,
+                      ), // 0.7 * 255 = 178.5 ≈ 179
                       offset: const Offset(1.5, 1.5),
                     ),
                   ],

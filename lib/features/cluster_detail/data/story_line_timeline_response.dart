@@ -30,11 +30,8 @@ class StoryLineTimelineResponse {
 
     final List<StoryLineTimelineEntry> entries =
         timelineData
-            .where((item) => item is Map<String, dynamic>)
-            .map(
-              (item) =>
-                  StoryLineTimelineEntry.fromJson(item as Map<String, dynamic>),
-            )
+            .whereType<Map<String, dynamic>>()
+            .map((item) => StoryLineTimelineEntry.fromJson(item))
             .toList();
 
     // Sort by date, newest first for chronological display

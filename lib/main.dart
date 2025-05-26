@@ -20,7 +20,7 @@ Future<void> main() async {
   // Add debugging for environment loading
   debugPrint("=== MAIN.DART ENV DEBUG START ===");
   debugPrint("Platform: ${kIsWeb ? 'Web' : 'Mobile'}");
-  debugPrint("Default Target Platform: ${defaultTargetPlatform}");
+  debugPrint("Default Target Platform: $defaultTargetPlatform");
 
   try {
     await dotenv.load(fileName: ".env");

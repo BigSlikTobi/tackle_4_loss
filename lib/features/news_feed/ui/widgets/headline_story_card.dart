@@ -93,7 +93,7 @@ class _HeadlineStoryCardState extends ConsumerState<HeadlineStoryCard>
                   shadows: [
                     Shadow(
                       blurRadius: 5.0,
-                      color: Colors.black.withOpacity(0.6),
+                      color: Colors.black.withAlpha(153), // 0.6 * 255 = 153
                       offset: const Offset(1.5, 1.5),
                     ),
                   ],
