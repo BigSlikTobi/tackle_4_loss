@@ -14,16 +14,18 @@ import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
 
 // Imports for news feed specific data, providers, and widgets
 import 'package:tackle_4_loss/features/news_feed/data/cluster_article.dart';
-import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart'; // For OtherNewsListItem
 import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart'; // Added
 import 'package:tackle_4_loss/features/news_feed/logic/featured_cluster_provider.dart'; // Added
+// NEW STORY LINES IMPORTS
+import 'package:tackle_4_loss/features/news_feed/data/story_line_item.dart';
+import 'package:tackle_4_loss/features/news_feed/logic/story_lines_provider.dart'
+    as story_lines;
+import 'package:tackle_4_loss/features/news_feed/ui/widgets/story_line_grid_item.dart';
+// END NEW STORY LINES IMPORTS
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/nfl_headline_item_card.dart';
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/other_news_list_item.dart';
-import 'package:tackle_4_loss/features/news_feed/ui/widgets/cluster_info_grid_item.dart';
 import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart'; // Import AllNewsScreen
-
-const int storyLinesPerPage = 6; // Define or import this constant
 
 class NewsFeedScreen extends ConsumerStatefulWidget {
   const NewsFeedScreen({super.key});
@@ -43,7 +45,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref
-            .read(paginatedClusterInfosProvider.notifier)
+            .read(story_lines.paginatedStoryLinesProvider.notifier)
             .ensureDataForStoryLinesPage(1);
       }
     });
@@ -59,7 +61,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   Future<void> _handleRefresh() async {
     debugPrint("NewsFeedScreen refresh triggered.");
     ref.invalidate(featuredClusterProvider);
-    ref.invalidate(paginatedClusterInfosProvider);
+    ref.invalidate(story_lines.paginatedStoryLinesProvider);
     // Assuming paginatedArticlesProvider takes a nullable String, adjust if different
     ref.invalidate(paginatedArticlesProvider(null));
 
@@ -68,24 +70,28 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
     }
     ref.read(featuredClusterPageIndexProvider.notifier).state = 0;
 
-    ref.read(storyLinesCurrentPageProvider.notifier).state = 1;
+    ref.read(story_lines.storyLinesCurrentPageProvider.notifier).state = 1;
     await ref
-        .read(paginatedClusterInfosProvider.notifier)
+        .read(story_lines.paginatedStoryLinesProvider.notifier)
         .ensureDataForStoryLinesPage(1);
   }
 
   @override
   Widget build(BuildContext context) {
     final featuredClusterAsync = ref.watch(featuredClusterProvider);
-    final paginatedClusterInfosAsync = ref.watch(paginatedClusterInfosProvider);
+    final paginatedStoryLinesAsync = ref.watch(
+      story_lines.paginatedStoryLinesProvider,
+    );
     // Assuming paginatedArticlesProvider takes a nullable String
     final otherNewsTop8Async = ref.watch(paginatedArticlesProvider(null));
 
     ref.watch(realtimeServiceProvider);
 
-    final currentStoryLinesUiPage = ref.watch(storyLinesCurrentPageProvider);
+    final currentStoryLinesUiPage = ref.watch(
+      story_lines.storyLinesCurrentPageProvider,
+    );
     ref
-        .read(paginatedClusterInfosProvider.notifier)
+        .read(story_lines.paginatedStoryLinesProvider.notifier)
         .ensureDataForStoryLinesPage(currentStoryLinesUiPage);
 
     const double maxWebWidth = 1200.0;
@@ -110,7 +116,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
               ),
             ),
           ),
-          _buildStoryLinesSliverGrid(context, paginatedClusterInfosAsync),
+          _buildStoryLinesSliverGrid(context, paginatedStoryLinesAsync),
           _buildStoryLinesPaginationControlsSliver(context),
           SliverToBoxAdapter(
             child: Padding(
@@ -257,59 +263,18 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
 
   Widget _buildStoryLinesSliverGrid(
     BuildContext context,
-    AsyncValue<List<ClusterInfo>> storyLinesAsync,
+    AsyncValue<List<StoryLineItem>> storyLinesAsync,
   ) {
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isWeb = kIsWeb;
-    // Define a breakpoint for mobile-like layout on web, consistent with ClusterInfoGridItem
+    // Define a breakpoint for mobile-like layout on web, consistent with StoryLineGridItem
     const mobileLayoutBreakpoint = 960.0;
-
-    int crossAxisCount;
-    double childAspectRatio;
-
-    if (isWeb) {
-      if (screenWidth > 1200) {
-        crossAxisCount = 4; // 1 row, 4 items (wide items)
-        childAspectRatio =
-            2.2; // Adjusted: Aim for good width for overlay layout
-      } else if (screenWidth > mobileLayoutBreakpoint) {
-        // Web tablet view (>960px)
-        crossAxisCount = 2; // 2x2 grid (landscape/square items)
-        childAspectRatio =
-            1.6; // Adjusted: Aim for good shape for overlay layout
-      } else {
-        // Web mobile view (<=960px)
-        crossAxisCount = 1; // List view, 1 item per row
-        // This uses the mobile-style card (image left, text right)
-        // Card height is roughly 80 (image) + 16 (padding) = 96.
-        // If cell width is screenWidth, aspect ratio = screenWidth / desired_cell_height.
-        // For a desired height of ~100-110px for the card to fit well:
-        // e.g., if screenWidth is 400, 400/100 = 4.0. If screenWidth is 600, 600/100 = 6.0
-        // Let's try a value that gives enough height for the card.
-        // If card height is ~100, and it takes full width (e.g. 320px on small phone)
-        // Aspect ratio = 320/100 = 3.2
-        // If on a 960px screen, width is ~900, height 100, aspect ratio = 9.
-        // This wide variation suggests that for single column list with fixed height items,
-        // childAspectRatio might not be the best. However, SliverGrid requires it.
-        // Let's try a value that gives reasonable height on average small web screens.
-        childAspectRatio =
-            3.5; // Increased to give more height if card is wider
-      }
-    } else {
-      // Native Mobile: List view, 1 item per row
-      crossAxisCount = 1;
-      // Mobile card height is approx 80 (image) + 16 (padding) = 96.
-      // Let cell height be around 100-110.
-      // childAspectRatio = cellWidth / cellHeight.
-      // cellWidth = screenWidth - 16*2 (horizontal padding of SliverPadding)
-      // e.g. (360-32)/110 = 2.98
-      // e.g. (400-32)/110 = 3.34
-      childAspectRatio = 3.0; // This seemed to work well for native mobile card
-    }
+    final bool useMobileLayout =
+        !isWeb || (isWeb && screenWidth <= mobileLayoutBreakpoint);
 
     return storyLinesAsync.when(
-      data: (allFetchedClusters) {
-        if (allFetchedClusters.isEmpty) {
+      data: (allFetchedStoryLines) {
+        if (allFetchedStoryLines.isEmpty) {
           return const SliverToBoxAdapter(
             child: Center(
               child: Padding(
@@ -320,58 +285,71 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
           );
         }
 
-        final currentUiPage = ref.watch(storyLinesCurrentPageProvider);
+        if (useMobileLayout) {
+          // --- Mobile Layout: Pagination with 4 items per page ---
+          final currentUiPage = ref.watch(
+            story_lines.storyLinesCurrentPageProvider,
+          );
+          const itemsPerPage = 4;
 
-        final startIndex = (currentUiPage - 1) * storyLinesPerPage;
-        final endIndex = math.min(
-          startIndex + storyLinesPerPage,
-          allFetchedClusters.length,
-        );
+          final startIndex = (currentUiPage - 1) * itemsPerPage;
+          final endIndex = math.min(
+            startIndex + itemsPerPage,
+            allFetchedStoryLines.length,
+          );
 
-        List<ClusterInfo> currentPageDisplayItems = [];
-        if (startIndex < allFetchedClusters.length && startIndex < endIndex) {
-          currentPageDisplayItems = allFetchedClusters.sublist(
-            startIndex,
-            endIndex,
+          List<StoryLineItem> currentPageDisplayItems = [];
+          if (startIndex < allFetchedStoryLines.length &&
+              startIndex < endIndex) {
+            currentPageDisplayItems = allFetchedStoryLines.sublist(
+              startIndex,
+              endIndex,
+            );
+          }
+
+          if (currentPageDisplayItems.isEmpty) {
+            return const SliverToBoxAdapter(child: SizedBox.shrink());
+          }
+
+          return SliverPadding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 16.0,
+              vertical: 8.0,
+            ),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate((context, index) {
+                final storyLineItem = currentPageDisplayItems[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: StoryLineGridItem(storyLine: storyLineItem),
+                );
+              }, childCount: currentPageDisplayItems.length),
+            ),
+          );
+        } else {
+          // --- Web Layout: Horizontal scroll with all items in one row ---
+          return SliverToBoxAdapter(
+            child: Container(
+              height: 320, // Fixed height for the horizontal scroll area
+              padding: const EdgeInsets.symmetric(
+                horizontal: 24.0,
+                vertical: 8.0,
+              ),
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: allFetchedStoryLines.length,
+                itemBuilder: (context, index) {
+                  final storyLineItem = allFetchedStoryLines[index];
+                  return Container(
+                    width: 280, // Fixed width for each story line card
+                    margin: const EdgeInsets.only(right: 16.0),
+                    child: StoryLineGridItem(storyLine: storyLineItem),
+                  );
+                },
+              ),
+            ),
           );
         }
-
-        // This case handles if the sublist is empty but there are items (e.g. page out of bounds after refresh)
-        // Or if there are no items at all for the current page after filtering.
-        if (currentPageDisplayItems.isEmpty) {
-          // If it's not the first page or there are truly no items, show empty.
-          if (currentUiPage > 1 || allFetchedClusters.isEmpty) {
-            return const SliverToBoxAdapter(
-              child: SizedBox.shrink(),
-            ); // Or a message
-          }
-          // If it IS the first page, but somehow sublist is empty (e.g. bad data), also show empty.
-          // This check might be redundant if allFetchedClusters.isEmpty is handled above.
-          if (allFetchedClusters.isNotEmpty && startIndex == 0) {
-            return const SliverToBoxAdapter(
-              child: SizedBox.shrink(),
-            ); // Or a message
-          }
-        }
-
-        return SliverPadding(
-          padding: EdgeInsets.symmetric(
-            horizontal: kIsWeb ? 24.0 : 16.0,
-            vertical: 8.0,
-          ),
-          sliver: SliverGrid(
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: crossAxisCount,
-              childAspectRatio: childAspectRatio,
-              crossAxisSpacing: kIsWeb ? 16.0 : 8.0,
-              mainAxisSpacing: kIsWeb ? 16.0 : 8.0,
-            ),
-            delegate: SliverChildBuilderDelegate((context, index) {
-              final clusterInfo = currentPageDisplayItems[index];
-              return ClusterInfoGridItem(cluster: clusterInfo);
-            }, childCount: currentPageDisplayItems.length),
-          ),
-        );
       },
       loading:
           () => const SliverToBoxAdapter(
@@ -385,29 +363,46 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
   }
 
   Widget _buildStoryLinesPaginationControlsSliver(BuildContext context) {
-    final clusterNotifier = ref.read(paginatedClusterInfosProvider.notifier);
-    final currentUiPage = ref.watch(storyLinesCurrentPageProvider);
-    final paginatedClustersState = ref.watch(paginatedClusterInfosProvider);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final bool isWeb = kIsWeb;
+    const mobileLayoutBreakpoint = 960.0;
+    final bool useMobileLayout =
+        !isWeb || (isWeb && screenWidth <= mobileLayoutBreakpoint);
 
-    final int totalFetchedItemsInBuffer = paginatedClustersState.maybeWhen(
-      data: (data) => clusterNotifier.totalFetchedClusterItems,
+    // Only show pagination controls on mobile layouts
+    if (!useMobileLayout) {
+      return const SliverToBoxAdapter(child: SizedBox.shrink());
+    }
+
+    final storyLinesNotifier = ref.read(
+      story_lines.paginatedStoryLinesProvider.notifier,
+    );
+    final currentUiPage = ref.watch(story_lines.storyLinesCurrentPageProvider);
+    final paginatedStoryLinesState = ref.watch(
+      story_lines.paginatedStoryLinesProvider,
+    );
+
+    final int totalFetchedItemsInBuffer = paginatedStoryLinesState.maybeWhen(
+      data: (data) => storyLinesNotifier.totalFetchedStoryLineItems,
       orElse: () => 0,
     );
 
+    // Use 4 items per page for mobile pagination
+    const itemsPerPage = 4;
     final totalDisplayableUiPagesInBuffer =
-        (totalFetchedItemsInBuffer / storyLinesPerPage).ceil();
+        (totalFetchedItemsInBuffer / itemsPerPage).ceil();
 
     final bool canGoNext =
         currentUiPage < totalDisplayableUiPagesInBuffer ||
-        clusterNotifier.hasMoreData;
+        storyLinesNotifier.hasMoreData;
     final bool canGoPrev = currentUiPage > 1;
 
-    if (totalFetchedItemsInBuffer == 0 && !clusterNotifier.isLoadingMore) {
+    if (totalFetchedItemsInBuffer == 0 && !storyLinesNotifier.isLoadingMore) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
-    if (totalFetchedItemsInBuffer <= storyLinesPerPage &&
-        !clusterNotifier.hasMoreData &&
-        !clusterNotifier.isLoadingMore &&
+    if (totalFetchedItemsInBuffer <= itemsPerPage &&
+        !storyLinesNotifier.hasMoreData &&
+        !storyLinesNotifier.isLoadingMore &&
         !canGoPrev) {
       return const SliverToBoxAdapter(child: SizedBox.shrink());
     }
@@ -417,7 +412,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
         padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 24.0),
         child: Column(
           children: [
-            if (clusterNotifier.isLoadingMore)
+            if (storyLinesNotifier.isLoadingMore)
               const Padding(
                 padding: EdgeInsets.only(bottom: 12.0),
                 child: LoadingIndicator(),
@@ -427,13 +422,35 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   if (canGoPrev)
-                    ElevatedButton(
-                      onPressed: () {
+                    GestureDetector(
+                      onTap: () {
                         ref
-                            .read(storyLinesCurrentPageProvider.notifier)
+                            .read(
+                              story_lines
+                                  .storyLinesCurrentPageProvider
+                                  .notifier,
+                            )
                             .state--;
                       },
-                      child: const Text('Previous'),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            Icons.arrow_back_ios,
+                            size: 16,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Previous',
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                   else
                     const SizedBox(width: 80),
@@ -444,13 +461,35 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                   ),
 
                   if (canGoNext)
-                    ElevatedButton(
-                      onPressed: () {
+                    GestureDetector(
+                      onTap: () {
                         ref
-                            .read(storyLinesCurrentPageProvider.notifier)
+                            .read(
+                              story_lines
+                                  .storyLinesCurrentPageProvider
+                                  .notifier,
+                            )
                             .state++;
                       },
-                      child: const Text('Next'),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            'Next',
+                            style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.underline,
+                            ),
+                          ),
+                          const SizedBox(width: 4),
+                          Icon(
+                            Icons.arrow_forward_ios,
+                            size: 16,
+                            color: Theme.of(context).primaryColor,
+                          ),
+                        ],
+                      ),
                     )
                   else
                     const SizedBox(width: 80),

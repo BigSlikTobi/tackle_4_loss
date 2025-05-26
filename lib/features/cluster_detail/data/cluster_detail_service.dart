@@ -1,7 +1,7 @@
 // File: lib/features/cluster_detail/data/cluster_detail_service.dart
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:tackle_4_loss/features/cluster_detail/data/cluster_timeline_response.dart';
+
 import 'package:tackle_4_loss/features/cluster_detail/data/cluster_summary_data.dart';
 // --- Import new models ---
 import 'package:tackle_4_loss/features/cluster_detail/data/single_view_data.dart';
@@ -133,73 +133,7 @@ class ClusterDetailService {
     }
   }
 
-  // --- Existing methods: getClusterTimeline, getClusterSummary ---
-  Future<ClusterTimelineResponse> getClusterTimeline(String clusterId) async {
-    const functionName = 'cluster_timeline';
-    debugPrint(
-      "Fetching cluster timeline for clusterId: $clusterId from Edge Function: $functionName",
-    );
-
-    try {
-      final response = await _supabaseClient.functions.invoke(
-        functionName,
-        method: HttpMethod.get,
-        queryParameters: {'cluster_id': clusterId},
-      );
-
-      if (response.status != 200) {
-        var errorData = response.data;
-        String errorMessage =
-            'Failed to load cluster timeline: Status code ${response.status}';
-        if (errorData is Map && errorData.containsKey('error')) {
-          errorMessage += ': ${errorData['error']}';
-          if (errorData.containsKey('details')) {
-            errorMessage += '. Details: ${errorData['details']}';
-          }
-        } else if (errorData != null) {
-          errorMessage +=
-              ': ${errorData.toString().substring(0, errorData.toString().length > 100 ? 100 : errorData.toString().length)}...';
-        }
-        debugPrint(
-          'Error response data from $functionName (Cluster ID: $clusterId): $errorData',
-        );
-        throw Exception(errorMessage);
-      }
-
-      if (response.data == null) {
-        debugPrint(
-          "Error fetching cluster timeline (Cluster ID: $clusterId): Response data is null.",
-        );
-        throw Exception(
-          'Failed to load cluster timeline: Received null data format.',
-        );
-      }
-
-      debugPrint(
-        "[getClusterTimeline] Raw response data for $clusterId: ${response.data.toString().substring(0, response.data.toString().length > 300 ? 300 : response.data.toString().length)}...",
-      );
-
-      return ClusterTimelineResponse.fromJson(
-        response.data as Map<String, dynamic>,
-      );
-    } on FunctionException catch (e) {
-      debugPrint(
-        'Supabase FunctionException fetching cluster timeline (Cluster ID: $clusterId): ${e.details}',
-      );
-      final errorMessage = e.details?.toString() ?? e.toString();
-      throw Exception(
-        'Error invoking $functionName function for cluster timeline: $errorMessage',
-      );
-    } catch (e, stacktrace) {
-      debugPrint(
-        'Generic error fetching cluster timeline (Cluster ID: $clusterId): $e',
-      );
-      debugPrint('Stacktrace: $stacktrace');
-      throw Exception(
-        'An unexpected error occurred while fetching the cluster timeline.',
-      );
-    }
-  }
+  // --- Existing methods: getClusterSummary ---
 
   Future<ClusterSummaryData> getClusterSummary(String clusterId) async {
     const functionName = 'cluster_summary_by_id';
