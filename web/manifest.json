@@ -1,11 +1,11 @@
 {
-    "name": "tackle_4_loss",
-    "short_name": "tackle_4_loss",
+    "name": "Tackle4Loss",
+    "short_name": "Tackle4Loss",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#ffffff",
-    "theme_color": "#ffffff",
-    "description": "A new Flutter project.",
+    "background_color": "#0175C2",
+    "theme_color": "#0175C2",
+    "description": "Your ultimate NFL companion app for news, standings, and team information.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

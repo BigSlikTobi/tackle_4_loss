@@ -108,14 +108,16 @@ class AppTheme {
       ),
 
       // Card Theme
-      cardTheme: CardTheme(
+      cardTheme: const CardThemeData(
         elevation: 1.0, // Subtle elevation
         color: AppColors.surfaceLight,
         surfaceTintColor: Colors.transparent, // Avoid M3 tinting if not desired
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12.0), // Rounded corners
+          borderRadius: BorderRadius.all(
+            Radius.circular(12.0),
+          ), // Rounded corners
         ),
-        margin: const EdgeInsets.symmetric(
+        margin: EdgeInsets.symmetric(
           horizontal: 8,
           vertical: 4,
         ), // Default margin
