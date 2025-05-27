@@ -12,6 +12,8 @@ import 'firebase_options.dart';
 // Needed for background handler type
 import 'package:tackle_4_loss/core/services/notification_service.dart';
 import 'package:tackle_4_loss/core/providers/notification_provider.dart';
+// --- Import Environment Config ---
+import 'package:tackle_4_loss/core/config/environment_config.dart';
 // --- End Imports ---
 
 Future<void> main() async {
@@ -21,28 +23,46 @@ Future<void> main() async {
   debugPrint("=== MAIN.DART ENV DEBUG START ===");
   debugPrint("Platform: ${kIsWeb ? 'Web' : 'Mobile'}");
   debugPrint("Default Target Platform: $defaultTargetPlatform");
+  debugPrint("Environment Config Info: ${EnvironmentConfig.debugInfo}");
 
-  try {
-    await dotenv.load(fileName: ".env");
-    debugPrint("✅ .env file loaded successfully");
+  String? supabaseUrl;
+  String? supabaseAnonKey;
 
-    // Check specific environment variables
-    final supabaseUrl = dotenv.env['SUPABASE_URL'];
-    final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+  if (EnvironmentConfig.shouldUseEnvironmentConfig) {
+    // Mobile: Load from .env file
+    try {
+      await dotenv.load(fileName: ".env");
+      debugPrint("✅ .env file loaded successfully");
 
+      supabaseUrl = dotenv.env['SUPABASE_URL'];
+      supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
+
+      debugPrint(
+        "SUPABASE_URL: ${supabaseUrl != null ? 'LOADED' : 'NULL'} (${supabaseUrl?.substring(0, 20) ?? 'null'}...)",
+      );
+      debugPrint(
+        "SUPABASE_ANON_KEY: ${supabaseAnonKey != null ? 'LOADED' : 'NULL'} (${supabaseAnonKey?.substring(0, 10) ?? 'null'}...)",
+      );
+
+      // Check all loaded environment variables
+      debugPrint("Total env vars loaded: ${dotenv.env.length}");
+      debugPrint("Env keys: ${dotenv.env.keys.toList()}");
+    } catch (e) {
+      debugPrint("❌ Error loading .env file: $e");
+      debugPrint("This might be the root cause of mobile vs web differences!");
+    }
+  } else {
+    // Web: Use compile-time configuration
+    supabaseUrl = EnvironmentConfig.supabaseUrl;
+    supabaseAnonKey = EnvironmentConfig.supabaseAnonKey;
+
+    debugPrint("✅ Using web compile-time environment config");
     debugPrint(
       "SUPABASE_URL: ${supabaseUrl != null ? 'LOADED' : 'NULL'} (${supabaseUrl?.substring(0, 20) ?? 'null'}...)",
     );
     debugPrint(
       "SUPABASE_ANON_KEY: ${supabaseAnonKey != null ? 'LOADED' : 'NULL'} (${supabaseAnonKey?.substring(0, 10) ?? 'null'}...)",
     );
-
-    // Check all loaded environment variables
-    debugPrint("Total env vars loaded: ${dotenv.env.length}");
-    debugPrint("Env keys: ${dotenv.env.keys.toList()}");
-  } catch (e) {
-    debugPrint("❌ Error loading .env file: $e");
-    debugPrint("This might be the root cause of mobile vs web differences!");
   }
   debugPrint("=== MAIN.DART ENV DEBUG END ===");
 
@@ -58,9 +78,6 @@ Future<void> main() async {
   // Add debugging for Supabase initialization
   debugPrint("=== SUPABASE INIT DEBUG START ===");
   try {
-    final supabaseUrl = dotenv.env['SUPABASE_URL'];
-    final supabaseAnonKey = dotenv.env['SUPABASE_ANON_KEY'];
-
     if (supabaseUrl == null || supabaseAnonKey == null) {
       throw Exception(
         "Missing required environment variables: SUPABASE_URL=${supabaseUrl != null ? 'set' : 'missing'}, SUPABASE_ANON_KEY=${supabaseAnonKey != null ? 'set' : 'missing'}",
