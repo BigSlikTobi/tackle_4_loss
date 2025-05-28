@@ -3,11 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/core/navigation/app_navigation.dart';
-// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // selectedNavIndexProvider might be deprecated
+// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // currentDetailArticleIdProvider is being deprecated
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart';
-// import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart'; // No longer shown here
+// ArticleDetailScreen is no longer imported or shown directly by MainNavigationWrapper
 import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
 import 'package:tackle_4_loss/features/more/ui/more_options_sheet_content.dart';
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
@@ -15,47 +15,9 @@ import 'package:tackle_4_loss/core/constants/team_constants.dart';
 import 'package:tackle_4_loss/core/widgets/beta_banner.dart';
 
 class MainNavigationWrapper extends ConsumerWidget {
-  // Changed to ConsumerWidget as didChangeDependencies is removed
   final StatefulNavigationShell navigationShell;
 
   const MainNavigationWrapper({super.key, required this.navigationShell});
-
-  // This method is no longer needed as GoRouter and StatefulShellRoute handle URL syncing.
-  // @override
-  // void didChangeDependencies() {
-  //   super.didChangeDependencies();
-  //   final location = GoRouter.of(context).routeInformationProvider.value.uri.path;
-  //   final currentIndex = _getIndexFromLocation(location);
-  //   WidgetsBinding.instance.addPostFrameCallback((_) {
-  //     if (currentIndex != -1) {
-  //       // ref.read(selectedNavIndexProvider.notifier).state = currentIndex;
-  //     }
-  //   });
-  // }
-
-  // This method is no longer needed as GoRouter manages the active branch index.
-  // int _getIndexFromLocation(String location) {
-  //   switch (location) {
-  //     case '/':
-  //     case '/news':
-  //       return 0;
-  //     case '/my-team':
-  //       return 1;
-  //     case '/schedule':
-  //       return 2;
-  //     default:
-  //       // Check if it's an article detail opened from a main tab
-  //       // This logic might need adjustment with GoRouter handling details
-  //       final currentDetailId = ref.read(currentDetailArticleIdProvider);
-  //       if (currentDetailId != null && location.startsWith('/article/')) {
-  //         // Try to retain the underlying tab's index
-  //         // This is tricky and might be better handled by GoRouter's state.
-  //         // For now, let's assume if detail is shown, index doesn't change from main content.
-  //         // This part will be simplified as ArticleDetailScreen is a top-level route.
-  //       }
-  //       return ref.read(selectedNavIndexProvider); // Fallback or maintain current
-  //   }
-  // }
 
   void _showMoreOptions(BuildContext context) {
     showModalBottomSheet(
@@ -65,7 +27,9 @@ class MainNavigationWrapper extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
       ),
       builder: (BuildContext sheetContext) {
-        return const MoreOptionsSheetContent();
+        // Pass the context from MainNavigationWrapper's build method,
+        // which is under the GoRouter's scope.
+        return MoreOptionsSheetContent();
       },
     );
   }
@@ -73,13 +37,15 @@ class MainNavigationWrapper extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     debugPrint(
-      "[MainNavigationWrapper build] Current navigationShell index: ${navigationShell.currentIndex}",
+      "[MainNavigationWrapper build] Current navigationShell index: ${navigationShell.currentIndex}. Shell Location: ${GoRouter.of(context).routeInformationProvider.value.uri}",
     );
-    ref.watch(realtimeServiceProvider); // Ensure RealtimeService is initialized
+
+    // Ensure RealtimeService is initialized
+    ref.watch(realtimeServiceProvider);
 
     final currentLocale = ref.watch(localeNotifierProvider);
     final localeNotifier = ref.read(localeNotifierProvider.notifier);
-    // final currentDetailId = ref.watch(currentDetailArticleIdProvider); // No longer used to show ArticleDetailScreen here
+    // final currentDetailId = ref.watch(currentDetailArticleIdProvider); // DEPRECATED: No longer used here
     final selectedTeam = ref.watch(selectedTeamNotifierProvider).valueOrNull;
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -89,23 +55,18 @@ class MainNavigationWrapper extends ConsumerWidget {
       (item) => item.label == 'More',
     );
 
-    // The body is now directly the navigationShell, which GoRouter manages.
-    // No need for an IndexedStack here.
-    // final Widget bodyContent = currentDetailId != null
-    //     ? ArticleDetailScreen(articleId: currentDetailId) // This is removed
-    //     : navigationShell;
+    // The body is now directly the navigationShell.
+    // No more conditional rendering of ArticleDetailScreen here.
+    // Widget bodyContent = navigationShell; // This was simplified
 
     if (isMobileLayout) {
-      // No longer need to check currentDetailId here for AppBar/Scaffold
-      // Top-level routes (like ArticleDetailScreen) will build their own Scaffold.
-      // This Scaffold is for the Shell routes.
       return Scaffold(
         appBar: GlobalAppBar(
           automaticallyImplyLeading: false,
           leading: null,
           actions: const [],
         ),
-        body: navigationShell, // The content for the current tab/branch
+        body: navigationShell, // Directly use the shell for the body
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -114,17 +75,13 @@ class MainNavigationWrapper extends ConsumerWidget {
               currentIndex: navigationShell.currentIndex,
               onTap: (index) {
                 debugPrint(
-                  "[MainNavigationWrapper BottomNavBar onTap] Tapped index: $index",
+                  "[MainNavigationWrapper BottomNavBar onTap] Tapped index: $index. Current shell index: ${navigationShell.currentIndex}",
                 );
                 if (index == moreItemIndex) {
                   _showMoreOptions(context);
                 } else {
-                  // Use goBranch to navigate to the branch associated with the tab
-                  // This will also update navigationShell.currentIndex
                   navigationShell.goBranch(
                     index,
-                    // `initialLocation: true` will reset the branch's navigation stack to its initial route.
-                    // This is often desired for bottom navigation tabs.
                     initialLocation: index == navigationShell.currentIndex,
                   );
                 }
@@ -247,18 +204,15 @@ class MainNavigationWrapper extends ConsumerWidget {
                           )
                           : Icon(appNavItems[i].icon),
                   title: Text(appNavItems[i].label),
-                  selected:
-                      i ==
-                      navigationShell
-                          .currentIndex, // Selection based on shell index
+                  selected: i == navigationShell.currentIndex,
                   selectedColor: Theme.of(context).colorScheme.primary,
                   selectedTileColor: Theme.of(
                     context,
                   ).colorScheme.primary.withAlpha(26),
                   onTap: () {
-                    Navigator.pop(context); // Close drawer FIRST
+                    Navigator.pop(context);
                     debugPrint(
-                      "[MainNavigationWrapper Drawer onTap] Tapped index: $i",
+                      "[MainNavigationWrapper Drawer onTap] Tapped index: $i. Current shell index: ${navigationShell.currentIndex}",
                     );
                     if (i == moreItemIndex) {
                       _showMoreOptions(context);
@@ -313,8 +267,7 @@ class MainNavigationWrapper extends ConsumerWidget {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-                  child:
-                      navigationShell, // The content for the current tab/branch
+                  child: navigationShell, // Directly use the shell for the body
                 ),
               ),
             ),

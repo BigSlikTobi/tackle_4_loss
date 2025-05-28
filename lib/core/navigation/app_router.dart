@@ -19,7 +19,6 @@ import 'package:tackle_4_loss/features/news_feed/ui/cluster_article_detail_scree
 import 'package:tackle_4_loss/features/teams/data/team_info.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
 
-// Utility function to create TeamInfo from teamId (remains the same)
 TeamInfo createTeamInfoFromId(String teamId) {
   final fullName = getTeamFullName(teamId);
   final Map<String, Map<String, String>> teamDivisions = {
@@ -68,6 +67,8 @@ TeamInfo createTeamInfoFromId(String teamId) {
 final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
   debugLabel: 'root',
 );
+
+// Navigator keys for the branches of the StatefulShellRoute
 final GlobalKey<NavigatorState> _shellNavigatorNewsKey =
     GlobalKey<NavigatorState>(debugLabel: 'shellNews');
 final GlobalKey<NavigatorState> _shellNavigatorMyTeamKey =
@@ -79,99 +80,134 @@ final GlobalKey<NavigatorState> _shellNavigatorMoreKey =
 
 final appRouter = GoRouter(
   navigatorKey: _rootNavigatorKey,
-  initialLocation: '/',
+  initialLocation:
+      '/app/news', // Default to the news screen within the app shell
   debugLogDiagnostics: kDebugMode,
   routes: [
-    StatefulShellRoute.indexedStack(
-      builder: (
-        BuildContext context,
-        GoRouterState state,
-        StatefulNavigationShell navigationShell,
-      ) {
-        debugPrint(
-          "[GoRouter StatefulShellRoute.builder] Building MainNavigationWrapper. Current shell index: ${navigationShell.currentIndex}, Shell location: ${state.uri}",
-        );
-        return MainNavigationWrapper(navigationShell: navigationShell);
+    // Redirect from the root '/' to the default shell path '/app/news'
+    GoRoute(
+      path: '/',
+      redirect: (_, __) {
+        debugPrint("[GoRouter Redirect] Redirecting from '/' to '/app/news'");
+        return '/app/news'; // Redirect to the default nested route
       },
-      branches: <StatefulShellBranch>[
-        StatefulShellBranch(
-          navigatorKey: _shellNavigatorNewsKey,
-          routes: <RouteBase>[
-            GoRoute(
-              path: '/',
-              name: 'home',
-              pageBuilder: (context, state) {
-                debugPrint(
-                  "[GoRouter ShellBranch News ('/')] Building NewsFeedScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
-                );
-                return const NoTransitionPage(child: NewsFeedScreen());
-              },
+    ),
+
+    // This GoRoute now acts as the parent for the shell, establishing the '/app' base path.
+    GoRoute(
+      path: '/app',
+      // This parent GoRoute for the shell does not need a builder itself if all its children (the branches)
+      // are defined within the StatefulShellRoute.
+      // Or, if '/app' itself should be navigable and redirect, it can do that.
+      // For initialLocation '/app/news', we need a way for '/app' to resolve.
+      // One way is to redirect '/app' to '/app/news'.
+      redirect: (context, state) {
+        // If the user navigates to just '/app', redirect them to the default news tab.
+        if (state.uri.toString() == '/app') {
+          debugPrint(
+            "[GoRouter Redirect] Redirecting from '/app' to '/app/news'",
+          );
+          return '/app/news';
+        }
+        return null; // No redirect if path is more specific like /app/news
+      },
+      routes: [
+        // The StatefulShellRoute is now a child of the '/app' GoRoute
+        StatefulShellRoute.indexedStack(
+          builder: (
+            BuildContext context,
+            GoRouterState state,
+            StatefulNavigationShell navigationShell,
+          ) {
+            debugPrint(
+              "[GoRouter StatefulShellRoute.builder under /app] Building MainNavigationWrapper. Current shell index: ${navigationShell.currentIndex}, Shell effective path: ${state.uri}, matchedLocation: ${state.matchedLocation}",
+            );
+            return MainNavigationWrapper(navigationShell: navigationShell);
+          },
+          branches: <StatefulShellBranch>[
+            // Branch 1: News Feed
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorNewsKey,
+              routes: <RouteBase>[
+                GoRoute(
+                  path:
+                      'news', // Path is now relative to '/app', so full path is '/app/news'
+                  name: 'app-news', // Unique name
+                  pageBuilder: (context, state) {
+                    debugPrint(
+                      "[GoRouter ShellBranch News ('/app/news')] Building NewsFeedScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+                    );
+                    return const NoTransitionPage(child: NewsFeedScreen());
+                  },
+                ),
+              ],
             ),
-            GoRoute(
-              path: '/news',
-              name: 'news',
-              pageBuilder: (context, state) {
-                debugPrint(
-                  "[GoRouter ShellBranch News ('/news')] Building NewsFeedScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
-                );
-                return const NoTransitionPage(child: NewsFeedScreen());
-              },
+
+            // Branch 2: My Team
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorMyTeamKey,
+              routes: <RouteBase>[
+                GoRoute(
+                  path: 'my-team', // Relative, full path is '/app/my-team'
+                  name: 'app-my-team',
+                  pageBuilder: (context, state) {
+                    debugPrint(
+                      "[GoRouter ShellBranch MyTeam ('/app/my-team')] Building MyTeamScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+                    );
+                    return const NoTransitionPage(child: MyTeamScreen());
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
-        StatefulShellBranch(
-          navigatorKey: _shellNavigatorMyTeamKey,
-          routes: <RouteBase>[
-            GoRoute(
-              path: '/my-team',
-              name: 'my-team',
-              pageBuilder: (context, state) {
-                debugPrint(
-                  "[GoRouter ShellBranch MyTeam] Building MyTeamScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
-                );
-                return const NoTransitionPage(child: MyTeamScreen());
-              },
+
+            // Branch 3: Schedule
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorScheduleKey,
+              routes: <RouteBase>[
+                GoRoute(
+                  path: 'schedule', // Relative, full path is '/app/schedule'
+                  name: 'app-schedule',
+                  pageBuilder: (context, state) {
+                    debugPrint(
+                      "[GoRouter ShellBranch Schedule ('/app/schedule')] Building ScheduleScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+                    );
+                    return const NoTransitionPage(child: ScheduleScreen());
+                  },
+                ),
+              ],
             ),
-          ],
-        ),
-        StatefulShellBranch(
-          navigatorKey: _shellNavigatorScheduleKey,
-          routes: <RouteBase>[
-            GoRoute(
-              path: '/schedule',
-              name: 'schedule',
-              pageBuilder: (context, state) {
-                debugPrint(
-                  "[GoRouter ShellBranch Schedule] Building ScheduleScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
-                );
-                return const NoTransitionPage(child: ScheduleScreen());
-              },
-            ),
-          ],
-        ),
-        StatefulShellBranch(
-          navigatorKey: _shellNavigatorMoreKey,
-          routes: <RouteBase>[
-            GoRoute(
-              path: '/more-placeholder',
-              name: 'more-placeholder',
-              pageBuilder: (context, state) {
-                debugPrint(
-                  "[GoRouter ShellBranch More] Building More placeholder. Path: ${state.uri}, FullPath: ${state.fullPath}",
-                );
-                return const NoTransitionPage(child: SizedBox.shrink());
-              },
+
+            // Branch 4: More (placeholder)
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorMoreKey,
+              routes: <RouteBase>[
+                GoRoute(
+                  path:
+                      'more-placeholder', // Relative, full path is '/app/more-placeholder'
+                  name: 'app-more-placeholder',
+                  pageBuilder: (context, state) {
+                    debugPrint(
+                      "[GoRouter ShellBranch More ('/app/more-placeholder')] Building More placeholder. Path: ${state.uri}, FullPath: ${state.fullPath}",
+                    );
+                    return const NoTransitionPage(child: SizedBox.shrink());
+                  },
+                ),
+              ],
             ),
           ],
         ),
       ],
     ),
+
+    // --- Top-level routes (screens without the main navigation shell) ---
+    // These are siblings to the '/app' route.
     GoRoute(
       path: '/all-news',
       name: 'all-news',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         debugPrint(
-          "[GoRouter TopLevelRoute] Building AllNewsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /all-news] Building AllNewsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return const AllNewsScreen();
       },
@@ -179,9 +215,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/teams',
       name: 'teams',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         debugPrint(
-          "[GoRouter TopLevelRoute] Building TeamsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /teams] Building TeamsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return const TeamsScreen();
       },
@@ -189,9 +226,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/standings',
       name: 'standings',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         debugPrint(
-          "[GoRouter TopLevelRoute] Building StandingsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /standings] Building StandingsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return const StandingsScreen();
       },
@@ -199,9 +237,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/settings',
       name: 'settings',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         debugPrint(
-          "[GoRouter TopLevelRoute] Building SettingsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /settings] Building SettingsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return const SettingsScreen();
       },
@@ -209,9 +248,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/terms-privacy',
       name: 'terms-privacy',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         debugPrint(
-          "[GoRouter TopLevelRoute] Building TermsPrivacyScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /terms-privacy] Building TermsPrivacyScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return const TermsPrivacyScreen();
       },
@@ -219,6 +259,7 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/article/:articleId',
       name: 'article-detail',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final articleIdStr = state.pathParameters['articleId']!;
         final articleId = int.tryParse(articleIdStr);
@@ -229,7 +270,7 @@ final appRouter = GoRouter(
           );
         }
         debugPrint(
-          "[GoRouter TopLevelRoute] Building ArticleDetailScreen for ID: $articleId. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /article/:articleId] Building ArticleDetailScreen for ID: $articleId. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return ArticleDetailScreen(articleId: articleId);
       },
@@ -237,11 +278,12 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/team/:teamId',
       name: 'team-detail',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final teamId = state.pathParameters['teamId']!;
         final teamInfo = createTeamInfoFromId(teamId);
         debugPrint(
-          "[GoRouter TopLevelRoute] Building TeamDetailScreen for ID: $teamId. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /team/:teamId] Building TeamDetailScreen for ID: $teamId. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return TeamDetailScreen(teamInfo: teamInfo);
       },
@@ -249,10 +291,11 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/cluster/:clusterId',
       name: 'cluster-detail',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final clusterId = state.pathParameters['clusterId']!;
         debugPrint(
-          "[GoRouter TopLevelRoute] Building ClusterDetailScreen for ID: $clusterId. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /cluster/:clusterId] Building ClusterDetailScreen for ID: $clusterId. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return ClusterDetailScreen(clusterId: clusterId);
       },
@@ -260,10 +303,11 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/cluster-article/:clusterArticleId',
       name: 'cluster-article-detail',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final clusterArticleId = state.pathParameters['clusterArticleId']!;
         debugPrint(
-          "[GoRouter TopLevelRoute] Building ClusterArticleDetailScreen for ID: $clusterArticleId. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /cluster-article/:id] Building ClusterArticleDetailScreen for ID: $clusterArticleId. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return ClusterArticleDetailScreen(clusterArticleId: clusterArticleId);
       },
@@ -271,9 +315,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/sitemap.xml',
       name: 'sitemap',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         debugPrint(
-          "[GoRouter TopLevelRoute] Building Sitemap placeholder. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /sitemap.xml] Building Sitemap placeholder. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return Scaffold(
           appBar: AppBar(title: const Text('Sitemap')),
@@ -286,9 +331,10 @@ final appRouter = GoRouter(
     GoRoute(
       path: '/robots.txt',
       name: 'robots',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         debugPrint(
-          "[GoRouter TopLevelRoute] Building Robots placeholder. Path: ${state.uri}, FullPath: ${state.fullPath}",
+          "[GoRouter TopLevelRoute /robots.txt] Building Robots placeholder. Path: ${state.uri}, FullPath: ${state.fullPath}",
         );
         return Scaffold(
           appBar: AppBar(title: const Text('Robots')),
@@ -311,12 +357,14 @@ final appRouter = GoRouter(
             const Icon(Icons.error_outline, size: 64, color: Colors.red),
             const SizedBox(height: 16),
             Text(
-              'Page not found: ${state.error?.message ?? state.uri.toString()}',
+              'Page not found for ${state.uri}: ${state.error?.message ?? ''}',
               style: Theme.of(context).textTheme.headlineSmall,
             ),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () => context.go('/'),
+              onPressed:
+                  () =>
+                      context.go('/app/news'), // Go to the default shell route
               child: const Text('Go Home'),
             ),
           ],

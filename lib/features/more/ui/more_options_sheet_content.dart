@@ -10,19 +10,15 @@ class MoreOptionsSheetContent extends ConsumerWidget {
   final bool _showSocialLinks = true;
 
   Widget _buildMoreListItem({
-    required BuildContext
-    dialogContext, // Context of the dialog/sheet for theming and pop
-    required BuildContext
-    appNavigatorContext, // Context from the main app (that has GoRouter) for navigation
+    required BuildContext dialogContext,
+    required BuildContext appNavigatorContext,
     IconData? icon,
     String? assetIconPath,
     required String title,
-    required VoidCallback onTapAction, // This will contain the context.go()
+    required VoidCallback onTapAction,
     Color? iconColor,
   }) {
-    final theme = Theme.of(
-      dialogContext,
-    ); // Use dialogContext for theming inside the sheet
+    final theme = Theme.of(dialogContext);
     Widget leadingWidget;
     if (assetIconPath != null) {
       leadingWidget = Image.asset(
@@ -101,11 +97,36 @@ class MoreOptionsSheetContent extends ConsumerWidget {
     }
   }
 
+  void _navigateTo(BuildContext context, String path) {
+    final rootNavigatorContext =
+        GoRouter.of(context).routerDelegate.navigatorKey.currentContext;
+    final currentLocation =
+        GoRouter.of(context).routeInformationProvider.value.uri.toString();
+    debugPrint(
+      "[MoreOptionsSheetContent _navigateTo] Current router location: $currentLocation. Attempting to push '$path' onto root navigator.",
+    );
+
+    if (rootNavigatorContext != null) {
+      GoRouter.of(rootNavigatorContext).push(path);
+      debugPrint(
+        "[MoreOptionsSheetContent _navigateTo] Pushed '$path' using rootNavigatorContext.",
+      );
+    } else {
+      debugPrint(
+        "[MoreOptionsSheetContent _navigateTo] ERROR: Root navigator context is null. Falling back to standard context.push for '$path'.",
+      );
+      GoRouter.of(
+        context,
+      ).push(path); // Fallback, though this might be the problematic one
+    }
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final BuildContext appNavigatorContextForGoRouter = context;
+    final BuildContext appNavigatorContextForNavigation =
+        context; // Using the sheet's context for router access
     debugPrint(
-      "[MoreOptionsSheetContent build] appNavigatorContextForGoRouter hash: ${appNavigatorContextForGoRouter.hashCode}",
+      "[MoreOptionsSheetContent build] appNavigatorContextForNavigation hash: ${appNavigatorContextForNavigation.hashCode}",
     );
 
     final bottomPadding = MediaQuery.of(context).padding.bottom;
@@ -119,87 +140,53 @@ class MoreOptionsSheetContent extends ConsumerWidget {
         children: [
           _buildMoreListItem(
             dialogContext: context,
-            appNavigatorContext: appNavigatorContextForGoRouter,
+            appNavigatorContext: appNavigatorContextForNavigation,
             assetIconPath: 'assets/navigation/news.png',
             icon: Icons.newspaper,
             title: 'All News',
-            onTapAction: () {
-              final currentLocation =
-                  GoRouter.of(
-                    appNavigatorContextForGoRouter,
-                  ).routeInformationProvider.value.uri.toString();
-              debugPrint(
-                "[MoreOptionsSheetContent] All News action. Current router location: $currentLocation. Navigating to /all-news with context.go()",
-              );
-              GoRouter.of(appNavigatorContextForGoRouter).go('/all-news');
-            },
+            onTapAction:
+                () =>
+                    _navigateTo(appNavigatorContextForNavigation, '/all-news'),
           ),
           _buildMoreListItem(
             dialogContext: context,
-            appNavigatorContext: appNavigatorContextForGoRouter,
+            appNavigatorContext: appNavigatorContextForNavigation,
             assetIconPath: 'assets/navigation/teams.png',
             icon: Icons.group,
             title: 'Teams',
-            onTapAction: () {
-              final currentLocation =
-                  GoRouter.of(
-                    appNavigatorContextForGoRouter,
-                  ).routeInformationProvider.value.uri.toString();
-              debugPrint(
-                "[MoreOptionsSheetContent] Teams action. Current router location: $currentLocation. Navigating to /teams with context.go()",
-              );
-              GoRouter.of(appNavigatorContextForGoRouter).go('/teams');
-            },
+            onTapAction:
+                () => _navigateTo(appNavigatorContextForNavigation, '/teams'),
           ),
           _buildMoreListItem(
             dialogContext: context,
-            appNavigatorContext: appNavigatorContextForGoRouter,
+            appNavigatorContext: appNavigatorContextForNavigation,
             assetIconPath: 'assets/navigation/standings.png',
             icon: Icons.leaderboard,
             title: 'Standings',
-            onTapAction: () {
-              final currentLocation =
-                  GoRouter.of(
-                    appNavigatorContextForGoRouter,
-                  ).routeInformationProvider.value.uri.toString();
-              debugPrint(
-                "[MoreOptionsSheetContent] Standings action. Current router location: $currentLocation. Navigating to /standings with context.go()",
-              );
-              GoRouter.of(appNavigatorContextForGoRouter).go('/standings');
-            },
+            onTapAction:
+                () =>
+                    _navigateTo(appNavigatorContextForNavigation, '/standings'),
           ),
           _buildMoreListItem(
             dialogContext: context,
-            appNavigatorContext: appNavigatorContextForGoRouter,
+            appNavigatorContext: appNavigatorContextForNavigation,
             assetIconPath: 'assets/navigation/settings.png',
             icon: Icons.settings_outlined,
             title: 'Settings',
-            onTapAction: () {
-              final currentLocation =
-                  GoRouter.of(
-                    appNavigatorContextForGoRouter,
-                  ).routeInformationProvider.value.uri.toString();
-              debugPrint(
-                "[MoreOptionsSheetContent] Settings action. Current router location: $currentLocation. Navigating to /settings with context.go()",
-              );
-              GoRouter.of(appNavigatorContextForGoRouter).go('/settings');
-            },
+            onTapAction:
+                () =>
+                    _navigateTo(appNavigatorContextForNavigation, '/settings'),
           ),
           _buildMoreListItem(
             dialogContext: context,
-            appNavigatorContext: appNavigatorContextForGoRouter,
+            appNavigatorContext: appNavigatorContextForNavigation,
             icon: Icons.privacy_tip_outlined,
             title: 'Terms & Privacy',
-            onTapAction: () {
-              final currentLocation =
-                  GoRouter.of(
-                    appNavigatorContextForGoRouter,
-                  ).routeInformationProvider.value.uri.toString();
-              debugPrint(
-                "[MoreOptionsSheetContent] Terms & Privacy action. Current router location: $currentLocation. Navigating to /terms-privacy with context.go()",
-              );
-              GoRouter.of(appNavigatorContextForGoRouter).go('/terms-privacy');
-            },
+            onTapAction:
+                () => _navigateTo(
+                  appNavigatorContextForNavigation,
+                  '/terms-privacy',
+                ),
           ),
           if (_showSocialLinks) ...[
             const Divider(height: 32, indent: 24, endIndent: 24),

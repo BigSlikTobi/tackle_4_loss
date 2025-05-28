@@ -1,11 +1,10 @@
 // lib/features/news_feed/ui/widgets/other_news_list_item.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart'; // Import GoRouter
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // No longer needed for this
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
 import 'package:tackle_4_loss/core/constants/source_constants.dart';
 
@@ -38,6 +37,10 @@ class OtherNewsListItem extends ConsumerWidget {
       sourceDisplay = "";
     }
 
+    debugPrint(
+      "[OtherNewsListItem build] Building for article ID: ${article.id}, Headline: $headlineToShow",
+    );
+
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       elevation: 1.0,
@@ -45,10 +48,66 @@ class OtherNewsListItem extends ConsumerWidget {
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
+          debugPrint("-----------------------------------------");
           debugPrint(
-            "[OtherNewsListItem onTap] Navigating to /article/${article.id}",
+            "[OtherNewsListItem onTap CALLED!] Article ID: ${article.id}, Headline: $headlineToShow",
           );
-          context.push('/article/${article.id}'); // Use context.push
+          if (article.id == 0) {
+            debugPrint(
+              "[OtherNewsListItem onTap ERROR] Article ID is 0 or invalid. Cannot navigate.",
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Error: Article ID is invalid.")),
+            );
+            debugPrint("-----------------------------------------");
+            return;
+          }
+
+          final String targetPath = '/article/${article.id}';
+          final rootNavigatorContext =
+              GoRouter.of(context).routerDelegate.navigatorKey.currentContext;
+          final currentLocation =
+              GoRouter.of(
+                context,
+              ).routeInformationProvider.value.uri.toString();
+
+          debugPrint(
+            "[OtherNewsListItem onTap PRE-PUSH] Current location: $currentLocation. Attempting to push '$targetPath' onto root navigator.",
+          );
+
+          try {
+            if (rootNavigatorContext != null) {
+              GoRouter.of(rootNavigatorContext).push(targetPath);
+              debugPrint(
+                "[OtherNewsListItem onTap POST-PUSH] Pushed '$targetPath' using rootNavigatorContext.",
+              );
+            } else {
+              debugPrint(
+                "[OtherNewsListItem onTap WARNING] Root navigator context is null. Falling back to standard context.push for '$targetPath'.",
+              );
+              GoRouter.of(context).push(targetPath);
+              debugPrint(
+                "[OtherNewsListItem onTap POST-PUSH] Pushed '$targetPath' using standard context (fallback).",
+              );
+            }
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                debugPrint(
+                  "[OtherNewsListItem onTap POST-FRAME] GoRouter location after push: ${GoRouter.of(context).routeInformationProvider.value.uri.toString()}",
+                );
+              }
+            });
+          } catch (e, s) {
+            debugPrint(
+              "[OtherNewsListItem onTap ERROR ON PUSH] Failed to push for '$targetPath'. Error: $e",
+            );
+            debugPrint("Stacktrace: $s");
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text("Error navigating: $e")));
+          }
+          debugPrint("-----------------------------------------");
         },
         child: Padding(
           padding: const EdgeInsets.all(16.0),
@@ -96,11 +155,8 @@ class OtherNewsListItem extends ConsumerWidget {
                             width: 32,
                             fit: BoxFit.contain,
                             errorBuilder:
-                                (ctx, err, st) => const SizedBox(
-                                  width:
-                                      54, // Was 32, keeping 32 to match height
-                                  height: 32,
-                                ),
+                                (ctx, err, st) =>
+                                    const SizedBox(width: 32, height: 32),
                           ),
                         ),
                       ),
