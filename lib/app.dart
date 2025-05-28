@@ -1,39 +1,41 @@
+// lib/app.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_localizations/flutter_localizations.dart'; // Import delegates
-import 'package:tackle_4_loss/core/navigation/app_router.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+// import 'package:tackle_4_loss/core/navigation/main_navigation_wrapper.dart'; // No longer directly used here
 import 'package:tackle_4_loss/core/theme/app_theme.dart';
-import 'package:tackle_4_loss/core/providers/locale_provider.dart'; // Import locale provider
+import 'package:tackle_4_loss/core/providers/locale_provider.dart';
+// --- Import the routerProvider ---
+import 'package:tackle_4_loss/core/navigation/app_router.dart';
 
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Watch the locale provider to make MaterialApp rebuild when locale changes
     final currentLocale = ref.watch(localeNotifierProvider);
+    // Watch the router provider to get the GoRouter instance
+    final goRouter = ref.watch(routerProvider);
+
+    debugPrint("[MyApp build] MaterialApp is now MaterialApp.router");
 
     return MaterialApp.router(
-      title: 'Tackle4Loss',
+      // Changed to MaterialApp.router
+      routerConfig: goRouter, // Use routerConfig
+      // title: 'Tackle4Loss', // title is often set by GoRouter's routes or not needed for .router
       theme: AppTheme.lightTheme,
+
       // darkTheme: AppTheme.darkTheme,
       // themeMode: ThemeMode.system,
-
-      // --- Localization Setup ---
-      locale: currentLocale, // Set the current locale from the provider
-      supportedLocales: kSupportedLocales, // Define supported locales
+      locale: currentLocale,
+      supportedLocales: kSupportedLocales,
       localizationsDelegates: const [
-        // Provides localized strings for Material widgets (like back buttons)
         GlobalMaterialLocalizations.delegate,
-        // Provides localized strings for Cupertino widgets
         GlobalWidgetsLocalizations.delegate,
-        // Provides localized layout directions (LTR/RTL)
         GlobalCupertinoLocalizations.delegate,
-        // Add other delegates if you use packages like `intl` for app strings
       ],
 
-      // --- End Localization Setup ---
-      routerConfig: appRouter,
+      // home: const MainNavigationWrapper(), // home is managed by GoRouter
       debugShowCheckedModeBanner: false,
     );
   }

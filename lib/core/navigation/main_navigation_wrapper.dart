@@ -1,60 +1,61 @@
+// lib/core/navigation/main_navigation_wrapper.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/core/navigation/app_navigation.dart';
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
-// --- Use GlobalAppBar directly ---
+// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // selectedNavIndexProvider might be deprecated
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart';
-import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
+// import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart'; // No longer shown here
 import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
 import 'package:tackle_4_loss/features/more/ui/more_options_sheet_content.dart';
-// --- Import Layout Constants ---
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
-// --- Import Beta Banner ---
 import 'package:tackle_4_loss/core/widgets/beta_banner.dart';
 
-class MainNavigationWrapper extends ConsumerStatefulWidget {
-  const MainNavigationWrapper({super.key});
+class MainNavigationWrapper extends ConsumerWidget {
+  // Changed to ConsumerWidget as didChangeDependencies is removed
+  final StatefulNavigationShell navigationShell;
 
-  @override
-  ConsumerState<MainNavigationWrapper> createState() =>
-      _MainNavigationWrapperState();
-}
+  const MainNavigationWrapper({super.key, required this.navigationShell});
 
-class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
+  // This method is no longer needed as GoRouter and StatefulShellRoute handle URL syncing.
+  // @override
+  // void didChangeDependencies() {
+  //   super.didChangeDependencies();
+  //   final location = GoRouter.of(context).routeInformationProvider.value.uri.path;
+  //   final currentIndex = _getIndexFromLocation(location);
+  //   WidgetsBinding.instance.addPostFrameCallback((_) {
+  //     if (currentIndex != -1) {
+  //       // ref.read(selectedNavIndexProvider.notifier).state = currentIndex;
+  //     }
+  //   });
+  // }
 
-    // Sync URL with navigation state
-    final location =
-        GoRouter.of(context).routeInformationProvider.value.uri.path;
-    final currentIndex = _getIndexFromLocation(location);
-
-    // Update navigation state if URL changed
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (currentIndex != -1) {
-        ref.read(selectedNavIndexProvider.notifier).state = currentIndex;
-      }
-    });
-  }
-
-  int _getIndexFromLocation(String location) {
-    switch (location) {
-      case '/':
-      case '/news':
-        return 0; // News Feed
-      case '/my-team':
-        return 1; // My Team
-      case '/schedule':
-        return 2; // Schedule
-      default:
-        return -1; // Unknown route
-    }
-  }
+  // This method is no longer needed as GoRouter manages the active branch index.
+  // int _getIndexFromLocation(String location) {
+  //   switch (location) {
+  //     case '/':
+  //     case '/news':
+  //       return 0;
+  //     case '/my-team':
+  //       return 1;
+  //     case '/schedule':
+  //       return 2;
+  //     default:
+  //       // Check if it's an article detail opened from a main tab
+  //       // This logic might need adjustment with GoRouter handling details
+  //       final currentDetailId = ref.read(currentDetailArticleIdProvider);
+  //       if (currentDetailId != null && location.startsWith('/article/')) {
+  //         // Try to retain the underlying tab's index
+  //         // This is tricky and might be better handled by GoRouter's state.
+  //         // For now, let's assume if detail is shown, index doesn't change from main content.
+  //         // This part will be simplified as ArticleDetailScreen is a top-level route.
+  //       }
+  //       return ref.read(selectedNavIndexProvider); // Fallback or maintain current
+  //   }
+  // }
 
   void _showMoreOptions(BuildContext context) {
     showModalBottomSheet(
@@ -70,89 +71,68 @@ class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    // --- Initialize Realtime Service (ensure it runs) ---
-    // Reading the provider ensures its initialization logic runs if not already done.
-    ref.watch(realtimeServiceProvider);
-    // --- End Realtime Service Init ---
+  Widget build(BuildContext context, WidgetRef ref) {
+    debugPrint(
+      "[MainNavigationWrapper build] Current navigationShell index: ${navigationShell.currentIndex}",
+    );
+    ref.watch(realtimeServiceProvider); // Ensure RealtimeService is initialized
 
-    final selectedIndex = ref.watch(selectedNavIndexProvider);
     final currentLocale = ref.watch(localeNotifierProvider);
     final localeNotifier = ref.read(localeNotifierProvider.notifier);
-    final currentDetailId = ref.watch(currentDetailArticleIdProvider);
+    // final currentDetailId = ref.watch(currentDetailArticleIdProvider); // No longer used to show ArticleDetailScreen here
     final selectedTeam = ref.watch(selectedTeamNotifierProvider).valueOrNull;
 
     final screenWidth = MediaQuery.of(context).size.width;
     final bool isMobileLayout = screenWidth < kMobileLayoutBreakpoint;
 
-    final screens = appNavItems.map((item) => item.screen).toList();
     final moreItemIndex = appNavItems.indexWhere(
       (item) => item.label == 'More',
     );
 
-    final Widget mainIndexedStack = IndexedStack(
-      index: selectedIndex,
-      children: screens,
-    );
+    // The body is now directly the navigationShell, which GoRouter manages.
+    // No need for an IndexedStack here.
+    // final Widget bodyContent = currentDetailId != null
+    //     ? ArticleDetailScreen(articleId: currentDetailId) // This is removed
+    //     : navigationShell;
 
-    // If showing detail, the ArticleDetailScreen provides its own Scaffold/AppBar
-    // If showing main stack, MainNavigationWrapper provides the Scaffold/AppBar
-    final Widget bodyContent =
-        currentDetailId != null
-            ? ArticleDetailScreen(articleId: currentDetailId)
-            : mainIndexedStack;
-
-    // --- Build Mobile Layout ---
     if (isMobileLayout) {
-      // Only build Scaffold/AppBar if NOT showing detail view
-      if (currentDetailId != null) {
-        return bodyContent; // ArticleDetailScreen has its own Scaffold
-      }
-
-      // --- Scaffold for Mobile Main View ---
+      // No longer need to check currentDetailId here for AppBar/Scaffold
+      // Top-level routes (like ArticleDetailScreen) will build their own Scaffold.
+      // This Scaffold is for the Shell routes.
       return Scaffold(
-        // --- Use GlobalAppBar directly ---
         appBar: GlobalAppBar(
-          // No title needed here, defaults to app logo
-          automaticallyImplyLeading: false, // No back button on main screens
-          leading: null, // No menu button on mobile
-          actions: const [], // No actions needed on main mobile bar
+          automaticallyImplyLeading: false,
+          leading: null,
+          actions: const [],
         ),
+        body: navigationShell, // The content for the current tab/branch
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Beta banner above bottom navigation on mobile
             const BetaBanner(),
             BottomNavigationBar(
-              currentIndex: selectedIndex,
+              currentIndex: navigationShell.currentIndex,
               onTap: (index) {
+                debugPrint(
+                  "[MainNavigationWrapper BottomNavBar onTap] Tapped index: $index",
+                );
                 if (index == moreItemIndex) {
                   _showMoreOptions(context);
                 } else {
-                  ref.read(currentDetailArticleIdProvider.notifier).state =
-                      null;
-                  ref.read(selectedNavIndexProvider.notifier).state = index;
-
-                  // Update URL based on selected index
-                  final router = GoRouter.of(context);
-                  switch (index) {
-                    case 0:
-                      router.go('/');
-                      break;
-                    case 1:
-                      router.go('/my-team');
-                      break;
-                    case 2:
-                      router.go('/schedule');
-                      break;
-                  }
+                  // Use goBranch to navigate to the branch associated with the tab
+                  // This will also update navigationShell.currentIndex
+                  navigationShell.goBranch(
+                    index,
+                    // `initialLocation: true` will reset the branch's navigation stack to its initial route.
+                    // This is often desired for bottom navigation tabs.
+                    initialLocation: index == navigationShell.currentIndex,
+                  );
                 }
               },
               showSelectedLabels: false,
               showUnselectedLabels: false,
               items:
                   appNavItems.map((item) {
-                    // If this is the "My Team" item and user has a selected team, show team logo
                     if (item.label == 'My Team' && selectedTeam != null) {
                       return BottomNavigationBarItem(
                         icon: SizedBox(
@@ -160,22 +140,20 @@ class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
                           width: 24,
                           child: Image.asset(
                             getTeamLogoPath(selectedTeam),
-                            errorBuilder: (context, error, stackTrace) {
-                              // Fallback to default icon if team logo can't be loaded
-                              return item.assetIconPath != null
-                                  ? Image.asset(
-                                    item.assetIconPath!,
-                                    height: 24,
-                                    width: 24,
-                                  )
-                                  : Icon(item.icon);
-                            },
+                            errorBuilder:
+                                (context, error, stackTrace) =>
+                                    item.assetIconPath != null
+                                        ? Image.asset(
+                                          item.assetIconPath!,
+                                          height: 24,
+                                          width: 24,
+                                        )
+                                        : Icon(item.icon),
                           ),
                         ),
-                        label: '', // Keep labels empty
+                        label: '',
                       );
                     }
-                    // Use asset icon if provided
                     if (item.assetIconPath != null) {
                       return BottomNavigationBarItem(
                         icon: SizedBox(
@@ -194,7 +172,6 @@ class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
                         label: '',
                       );
                     }
-                    // Fallback to IconData
                     return BottomNavigationBarItem(
                       icon: Icon(item.icon),
                       label: '',
@@ -206,32 +183,20 @@ class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
             ),
           ],
         ),
-        body: bodyContent, // This is the IndexedStack
       );
-    }
-    // --- Build Desktop/Tablet Layout ---
-    else {
-      // Only build Scaffold/AppBar if NOT showing detail view
-      if (currentDetailId != null) {
-        return bodyContent; // ArticleDetailScreen has its own Scaffold
-      }
-
-      // --- Scaffold for Desktop/Tablet Main View ---
+    } else {
+      // Desktop/Tablet Layout
       final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
-
       return Scaffold(
         key: scaffoldKey,
-        // --- Use GlobalAppBar directly ---
         appBar: GlobalAppBar(
-          // No title needed here, defaults to app logo
-          automaticallyImplyLeading: false, // We provide custom leading
+          automaticallyImplyLeading: false,
           leading: IconButton(
-            // Menu button to open drawer
             icon: const Icon(Icons.menu),
             tooltip: 'Open Menu',
             onPressed: () => scaffoldKey.currentState?.openDrawer(),
           ),
-          actions: const [], // No actions needed on main desktop bar
+          actions: const [],
         ),
         drawer: Drawer(
           child: ListView(
@@ -256,7 +221,6 @@ class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
                             height: 24,
                             width: 24,
                             errorBuilder: (context, error, stackTrace) {
-                              // Fallback to asset icon or IconData
                               final item = appNavItems[i];
                               if (item.assetIconPath != null) {
                                 return Image.asset(
@@ -283,33 +247,26 @@ class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
                           )
                           : Icon(appNavItems[i].icon),
                   title: Text(appNavItems[i].label),
-                  selected: i == selectedIndex, // Selection based on index only
+                  selected:
+                      i ==
+                      navigationShell
+                          .currentIndex, // Selection based on shell index
                   selectedColor: Theme.of(context).colorScheme.primary,
                   selectedTileColor: Theme.of(
                     context,
                   ).colorScheme.primary.withAlpha(26),
                   onTap: () {
                     Navigator.pop(context); // Close drawer FIRST
+                    debugPrint(
+                      "[MainNavigationWrapper Drawer onTap] Tapped index: $i",
+                    );
                     if (i == moreItemIndex) {
                       _showMoreOptions(context);
                     } else {
-                      ref.read(currentDetailArticleIdProvider.notifier).state =
-                          null;
-                      ref.read(selectedNavIndexProvider.notifier).state = i;
-
-                      // Update URL based on selected index
-                      final router = GoRouter.of(context);
-                      switch (i) {
-                        case 0:
-                          router.go('/');
-                          break;
-                        case 1:
-                          router.go('/my-team');
-                          break;
-                        case 2:
-                          router.go('/schedule');
-                          break;
-                      }
+                      navigationShell.goBranch(
+                        i,
+                        initialLocation: i == navigationShell.currentIndex,
+                      );
                     }
                   },
                 ),
@@ -327,7 +284,7 @@ class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
                 groupValue: currentLocale,
                 onChanged: (Locale? value) {
                   if (value != null) {
-                    Navigator.pop(context); // Pop drawer first
+                    Navigator.pop(context);
                     localeNotifier.setLocale(value);
                   }
                 },
@@ -340,7 +297,7 @@ class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
                 groupValue: currentLocale,
                 onChanged: (Locale? value) {
                   if (value != null) {
-                    Navigator.pop(context); // Pop drawer first
+                    Navigator.pop(context);
                     localeNotifier.setLocale(value);
                   }
                 },
@@ -350,19 +307,17 @@ class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
             ],
           ),
         ),
-        // --- Apply layout constraints to body ---
         body: Column(
           children: [
-            // Main content area
             Expanded(
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-                  child: bodyContent, // This is the IndexedStack
+                  child:
+                      navigationShell, // The content for the current tab/branch
                 ),
               ),
             ),
-            // Beta banner at bottom for desktop/web
             const BetaBanner(),
           ],
         ),

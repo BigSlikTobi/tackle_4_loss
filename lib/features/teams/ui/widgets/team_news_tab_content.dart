@@ -1,19 +1,20 @@
+// lib/features/teams/ui/widgets/team_news_tab_content.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
-import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart'; // Provider for articles
-import 'package:tackle_4_loss/features/news_feed/ui/widgets/article_list_item.dart'; // Widget for list item
+import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart';
+import 'package:tackle_4_loss/features/news_feed/ui/widgets/article_list_item.dart';
 
 class TeamNewsTabContent extends ConsumerStatefulWidget {
-  final String teamAbbreviation; // Team ID (e.g., "MIA")
+  final String teamAbbreviation;
   final int? excludeArticleId;
 
   const TeamNewsTabContent({
     super.key,
     required this.teamAbbreviation,
-    this.excludeArticleId, // Make it optional
+    this.excludeArticleId,
   });
 
   @override
@@ -52,15 +53,7 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
     debugPrint(
       "[TeamNewsTabContent _handleRefresh] Invalidating paginatedArticlesProvider for ${widget.teamAbbreviation}. Exclude ID: ${widget.excludeArticleId}",
     );
-    // Invalidate the provider for this specific team to refresh
     ref.invalidate(paginatedArticlesProvider(widget.teamAbbreviation));
-    // For pull-to-refresh, you might want to ensure the refresh indicator stays
-    // until the data is actually re-fetched. You can await the future of the provider.
-    // However, since invalidation itself triggers a rebuild when data is ready,
-    // simply invalidating is often enough. If you need the indicator to persist,
-    // you can do:
-    // await ref.read(paginatedArticlesProvider(widget.teamAbbreviation).future);
-    // But be cautious as this will make the onRefresh function async and hold the indicator.
   }
 
   @override
@@ -73,7 +66,6 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
       "[TeamNewsTabContent build] Team: ${widget.teamAbbreviation}, Exclude ID: ${widget.excludeArticleId}, AsyncState: $articlesAsyncValue",
     );
 
-    // --- MODIFICATION: Wrap with RefreshIndicator ---
     return RefreshIndicator(
       onRefresh: _handleRefresh,
       child: articlesAsyncValue.when(
@@ -100,14 +92,11 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
                     .watch(paginatedArticlesProvider(widget.teamAbbreviation))
                     .isLoading;
             if (isLoading) {
-              return const Center(
-                child: LoadingIndicator(),
-              ); // Keep centered for initial load case
+              return const Center(child: LoadingIndicator());
             }
 
             return LayoutBuilder(
               builder: (context, constraints) {
-                // Make the empty content scrollable to enable pull-to-refresh
                 return SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
                   child: ConstrainedBox(
@@ -115,7 +104,7 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
                       minHeight:
                           constraints.maxHeight > 0
                               ? constraints.maxHeight
-                              : 200, // Ensure some min height
+                              : 200,
                     ),
                     child: Center(
                       child: Padding(
@@ -146,13 +135,15 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
                 );
               }
               if (index < filteredArticleList.length) {
+                final article = filteredArticleList[index];
                 return ArticleListItem(
-                  article: filteredArticleList[index],
+                  article: article,
                   onTap: () {
+                    // onTap is now primarily for GoRouter navigation
                     debugPrint(
-                      'TeamNewsTabContent: Navigating to detail for articleId: ${filteredArticleList[index].id}',
+                      '[TeamNewsTabContent onTap] Navigating to /article/${article.id}',
                     );
-                    context.push('/article/${filteredArticleList[index].id}');
+                    context.push('/article/${article.id}');
                   },
                 );
               }
@@ -164,7 +155,6 @@ class _TeamNewsTabContentState extends ConsumerState<TeamNewsTabContent> {
           debugPrint(
             "[TeamNewsTabContent build loading] Team: ${widget.teamAbbreviation}",
           );
-          // For initial loading, ensure RefreshIndicator can still work if it's a direct child
           return Stack(
             children: [ListView(), const Center(child: LoadingIndicator())],
           );

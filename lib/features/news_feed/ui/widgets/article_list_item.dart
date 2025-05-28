@@ -1,20 +1,23 @@
 // lib/features/news_feed/ui/widgets/article_list_item.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart'; // Import GoRouter
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:intl/intl.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
+// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // No longer needed for this
 
 class ArticleListItem extends ConsumerWidget {
   final ArticlePreview article;
-  final VoidCallback onTap;
+  final VoidCallback
+  onTap; // Keep onTap if used by parent, but internal nav will use GoRouter
 
   const ArticleListItem({
     super.key,
     required this.article,
-    required this.onTap,
+    required this.onTap, // Parent might still want to know about a tap for other reasons
   });
 
   @override
@@ -35,9 +38,11 @@ class ArticleListItem extends ConsumerWidget {
       child: InkWell(
         onTap: () {
           debugPrint(
-            'ArticleListItem: onTap called for articleId: \\${article.id}',
+            '[ArticleListItem onTap] Navigating to /article/${article.id}',
           );
-          onTap();
+          context.push('/article/${article.id}'); // Use context.push
+          // If the parent still needs to know about the tap for non-navigation reasons:
+          // onTap();
         },
         borderRadius: BorderRadius.circular(12.0),
         child: Padding(
@@ -45,7 +50,6 @@ class ArticleListItem extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image Section
               SizedBox(
                 width: 90,
                 height: 90,
@@ -83,8 +87,6 @@ class ArticleListItem extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Text Section
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -109,7 +111,6 @@ class ArticleListItem extends ConsumerWidget {
                             ).add_jm().format(article.createdAt!),
                             style: textTheme.bodySmall,
                           ),
-                        // Team logo - now positioned on the right
                         if (article.teamId != null &&
                             article.teamId!.isNotEmpty)
                           Container(
@@ -120,7 +121,6 @@ class ArticleListItem extends ConsumerWidget {
                               color: Colors.white,
                               boxShadow: [
                                 BoxShadow(
-                                  // Use withAlpha instead of withOpacity
                                   color: Colors.black.withAlpha(
                                     (255 * 0.1).round(),
                                   ),
@@ -136,9 +136,7 @@ class ArticleListItem extends ConsumerWidget {
                                 width: 24,
                                 fit: BoxFit.contain,
                                 errorBuilder: (context, error, stackTrace) {
-                                  // Log the error for debugging
                                   debugPrint('Error loading team logo: $error');
-                                  // Return a fallback (either the team ID text or a default icon)
                                   return Center(
                                     child: Text(
                                       article.teamId!,
