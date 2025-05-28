@@ -17,7 +17,10 @@ class StandingsScreen extends ConsumerWidget {
     final viewType = ref.watch(standingsViewTypeProvider);
 
     return Scaffold(
-      appBar: const GlobalAppBar(title: Text('Standings')),
+      appBar: const GlobalAppBar(
+        title: Text('Standings'),
+        automaticallyImplyLeading: true,
+      ),
       body: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: kMaxContentWidth),

@@ -2,13 +2,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
 // REMOVE: import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
 // --- ADD IMPORT FOR CLUSTER DETAIL SCREEN ---
-import 'package:tackle_4_loss/features/cluster_detail/ui/cluster_detail_screen.dart';
 
 class ClusterInfoGridItem extends ConsumerWidget {
   final ClusterInfo cluster;
@@ -52,13 +52,7 @@ class ClusterInfoGridItem extends ConsumerWidget {
             debugPrint(
               "Tapped Cluster Grid Item ${cluster.clusterId} (Mobile). Navigating to Cluster Detail Screen.",
             );
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder:
-                    (context) =>
-                        ClusterDetailScreen(clusterId: cluster.clusterId),
-              ),
-            );
+            context.push('/cluster/${cluster.clusterId}');
           },
           child: Padding(
             // Added padding around the Row
@@ -140,13 +134,7 @@ class ClusterInfoGridItem extends ConsumerWidget {
           debugPrint(
             "Tapped Cluster Grid Item ${cluster.clusterId}. Navigating to Cluster Detail Screen.",
           );
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder:
-                  (context) =>
-                      ClusterDetailScreen(clusterId: cluster.clusterId),
-            ),
-          );
+          context.push('/cluster/${cluster.clusterId}');
           // --- END MODIFIED NAVIGATION ---
         },
         child: Stack(

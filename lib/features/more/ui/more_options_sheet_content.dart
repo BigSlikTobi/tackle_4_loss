@@ -1,14 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart';
-import 'package:tackle_4_loss/features/settings/ui/settings_screen.dart';
-// --- Import the new Teams Screen ---
-import 'package:tackle_4_loss/features/teams/ui/teams_screen.dart';
-// --- Import the new Standings Screen ---
-import 'package:tackle_4_loss/features/standings/ui/standings_screen.dart';
-// --- Import the Terms & Privacy Screen ---
-import 'package:tackle_4_loss/features/terms_privacy/ui/terms_privacy_screen.dart';
 
 class MoreOptionsSheetContent extends ConsumerWidget {
   const MoreOptionsSheetContent({super.key});
@@ -120,11 +113,7 @@ class MoreOptionsSheetContent extends ConsumerWidget {
             title: 'All News',
             onTap: () {
               debugPrint('All News tapped - Navigating to AllNewsScreen');
-              // Use root navigator if inside nested navigator, but usually fine
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const AllNewsScreen()),
-              );
+              context.push('/all-news');
             },
           ),
           _buildMoreListItem(
@@ -133,13 +122,8 @@ class MoreOptionsSheetContent extends ConsumerWidget {
             icon: Icons.group, // fallback
             title: 'Teams',
             onTap: () {
-              // --- MODIFIED: Navigate to TeamsScreen ---
               debugPrint('Teams tapped - Navigating to TeamsScreen');
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const TeamsScreen()),
-              );
-              // --- END MODIFICATION ---
+              context.push('/teams');
             },
           ),
           _buildMoreListItem(
@@ -149,12 +133,7 @@ class MoreOptionsSheetContent extends ConsumerWidget {
             title: 'Standings',
             onTap: () {
               debugPrint('Standings tapped - Navigating to StandingsScreen');
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const StandingsScreen(),
-                ),
-              );
+              context.push('/standings');
             },
           ),
           _buildMoreListItem(
@@ -164,12 +143,7 @@ class MoreOptionsSheetContent extends ConsumerWidget {
             title: 'Settings',
             onTap: () {
               debugPrint('Settings tapped - Navigating to SettingsScreen');
-              // --- Navigate to the new Settings Screen ---
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-              // --- End Navigation ---
+              context.push('/settings');
             },
           ),
           _buildMoreListItem(
@@ -178,12 +152,7 @@ class MoreOptionsSheetContent extends ConsumerWidget {
             title: 'Terms & Privacy',
             onTap: () {
               debugPrint('Terms & Privacy tapped');
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const TermsPrivacyScreen(),
-                ),
-              );
+              context.push('/terms-privacy');
             },
           ),
 

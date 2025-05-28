@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_localizations/flutter_localizations.dart'; // Import delegates
-import 'package:tackle_4_loss/core/navigation/main_navigation_wrapper.dart';
+import 'package:tackle_4_loss/core/navigation/app_router.dart';
 import 'package:tackle_4_loss/core/theme/app_theme.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart'; // Import locale provider
 
@@ -13,7 +13,7 @@ class MyApp extends ConsumerWidget {
     // Watch the locale provider to make MaterialApp rebuild when locale changes
     final currentLocale = ref.watch(localeNotifierProvider);
 
-    return MaterialApp(
+    return MaterialApp.router(
       title: 'Tackle4Loss',
       theme: AppTheme.lightTheme,
       // darkTheme: AppTheme.darkTheme,
@@ -33,7 +33,7 @@ class MyApp extends ConsumerWidget {
       ],
 
       // --- End Localization Setup ---
-      home: const MainNavigationWrapper(),
+      routerConfig: appRouter,
       debugShowCheckedModeBanner: false,
     );
   }
