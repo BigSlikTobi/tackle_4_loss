@@ -3,9 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/features/cluster_detail/ui/cluster_detail_screen.dart'; // For navigation
+// For navigation
 
 class ClusterInfoListItem extends ConsumerWidget {
   final ClusterInfo cluster;
@@ -34,13 +35,7 @@ class ClusterInfoListItem extends ConsumerWidget {
           debugPrint(
             "Tapped ClusterInfoListItem ${cluster.clusterId}. Navigating to ClusterDetailScreen.",
           );
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder:
-                  (context) =>
-                      ClusterDetailScreen(clusterId: cluster.clusterId),
-            ),
-          );
+          context.push('/cluster/${cluster.clusterId}');
         },
         borderRadius: BorderRadius.circular(12.0),
         child: Padding(

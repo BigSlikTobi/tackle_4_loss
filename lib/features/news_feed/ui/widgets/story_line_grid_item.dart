@@ -2,10 +2,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/features/news_feed/data/story_line_item.dart';
 import 'package:flutter/foundation.dart'; // For kIsWeb
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
-import 'package:tackle_4_loss/features/cluster_detail/ui/cluster_detail_screen.dart';
 
 String _stripHtml(String htmlText) {
   final RegExp htmlTags = RegExp(
@@ -52,13 +52,7 @@ class StoryLineGridItem extends ConsumerWidget {
             debugPrint(
               "Tapped Story Line Grid Item ${storyLine.clusterId} (Mobile). Navigating to Cluster Detail Screen.",
             );
-            Navigator.of(context).push(
-              MaterialPageRoute(
-                builder:
-                    (context) =>
-                        ClusterDetailScreen(clusterId: storyLine.clusterId),
-              ),
-            );
+            context.push('/cluster/${storyLine.clusterId}');
           },
           child: Padding(
             // Added padding around the Row
@@ -142,13 +136,7 @@ class StoryLineGridItem extends ConsumerWidget {
           debugPrint(
             "Tapped Story Line Grid Item ${storyLine.clusterId}. Navigating to Cluster Detail Screen.",
           );
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder:
-                  (context) =>
-                      ClusterDetailScreen(clusterId: storyLine.clusterId),
-            ),
-          );
+          context.push('/cluster/${storyLine.clusterId}');
         },
         child: Stack(
           fit: StackFit.expand, // Stack will also fill the Card

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/core/navigation/app_navigation.dart';
 import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 // --- Use GlobalAppBar directly ---
@@ -15,8 +16,45 @@ import 'package:tackle_4_loss/core/constants/team_constants.dart';
 // --- Import Beta Banner ---
 import 'package:tackle_4_loss/core/widgets/beta_banner.dart';
 
-class MainNavigationWrapper extends ConsumerWidget {
+class MainNavigationWrapper extends ConsumerStatefulWidget {
   const MainNavigationWrapper({super.key});
+
+  @override
+  ConsumerState<MainNavigationWrapper> createState() =>
+      _MainNavigationWrapperState();
+}
+
+class _MainNavigationWrapperState extends ConsumerState<MainNavigationWrapper> {
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+
+    // Sync URL with navigation state
+    final location =
+        GoRouter.of(context).routeInformationProvider.value.uri.path;
+    final currentIndex = _getIndexFromLocation(location);
+
+    // Update navigation state if URL changed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (currentIndex != -1) {
+        ref.read(selectedNavIndexProvider.notifier).state = currentIndex;
+      }
+    });
+  }
+
+  int _getIndexFromLocation(String location) {
+    switch (location) {
+      case '/':
+      case '/news':
+        return 0; // News Feed
+      case '/my-team':
+        return 1; // My Team
+      case '/schedule':
+        return 2; // Schedule
+      default:
+        return -1; // Unknown route
+    }
+  }
 
   void _showMoreOptions(BuildContext context) {
     showModalBottomSheet(
@@ -32,7 +70,7 @@ class MainNavigationWrapper extends ConsumerWidget {
   }
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     // --- Initialize Realtime Service (ensure it runs) ---
     // Reading the provider ensures its initialization logic runs if not already done.
     ref.watch(realtimeServiceProvider);
@@ -94,6 +132,20 @@ class MainNavigationWrapper extends ConsumerWidget {
                   ref.read(currentDetailArticleIdProvider.notifier).state =
                       null;
                   ref.read(selectedNavIndexProvider.notifier).state = index;
+
+                  // Update URL based on selected index
+                  final router = GoRouter.of(context);
+                  switch (index) {
+                    case 0:
+                      router.go('/');
+                      break;
+                    case 1:
+                      router.go('/my-team');
+                      break;
+                    case 2:
+                      router.go('/schedule');
+                      break;
+                  }
                 }
               },
               showSelectedLabels: false,
@@ -244,6 +296,20 @@ class MainNavigationWrapper extends ConsumerWidget {
                       ref.read(currentDetailArticleIdProvider.notifier).state =
                           null;
                       ref.read(selectedNavIndexProvider.notifier).state = i;
+
+                      // Update URL based on selected index
+                      final router = GoRouter.of(context);
+                      switch (i) {
+                        case 0:
+                          router.go('/');
+                          break;
+                        case 1:
+                          router.go('/my-team');
+                          break;
+                        case 2:
+                          router.go('/schedule');
+                          break;
+                      }
                     }
                   },
                 ),

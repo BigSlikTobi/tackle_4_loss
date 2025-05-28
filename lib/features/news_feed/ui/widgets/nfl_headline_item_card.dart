@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:intl/intl.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/features/news_feed/data/cluster_article.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/features/news_feed/ui/cluster_article_detail_screen.dart'; // Import the new screen
 import 'package:flutter/foundation.dart'; // Added for kIsWeb
 
 // Utility function to strip HTML tags
@@ -178,15 +178,8 @@ class _NflHeadlineItemCardState extends ConsumerState<NflHeadlineItemCard>
                     onTap: () {
                       // Navigate to detail screen
                       if (widget.clusterArticle.clusterArticleId.isNotEmpty) {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder:
-                                (context) => ClusterArticleDetailScreen(
-                                  clusterArticleId:
-                                      widget.clusterArticle.clusterArticleId,
-                                ),
-                          ),
+                        context.push(
+                          '/cluster-article/${widget.clusterArticle.clusterArticleId}',
                         );
                       } else {
                         debugPrint(

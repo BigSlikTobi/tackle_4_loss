@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:go_router/go_router.dart';
 
 // Core utilities, services, and widgets
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
@@ -25,7 +26,7 @@ import 'package:tackle_4_loss/features/news_feed/ui/widgets/story_line_grid_item
 // END NEW STORY LINES IMPORTS
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/nfl_headline_item_card.dart';
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/other_news_list_item.dart';
-import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart'; // Import AllNewsScreen
+// Remove: import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart'; // Import AllNewsScreen
 
 class NewsFeedScreen extends ConsumerStatefulWidget {
   const NewsFeedScreen({super.key});
@@ -530,12 +531,7 @@ class _NewsFeedScreenState extends ConsumerState<NewsFeedScreen> {
                       icon: const Icon(Icons.arrow_forward_ios, size: 16),
                       label: const Text("More News"),
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const AllNewsScreen(),
-                          ),
-                        );
+                        context.push('/all-news');
                       },
                       style: TextButton.styleFrom(
                         padding: EdgeInsets.zero,

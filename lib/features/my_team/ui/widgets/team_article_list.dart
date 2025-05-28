@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
-import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 // --- VERIFY THIS IMPORT PATH AND THE CONTENT OF THE FILE ---
 import 'package:tackle_4_loss/features/news_feed/data/news_feed_service.dart';
 // This import brings in NewsFeedService AND PaginatedArticlesResponse
@@ -46,14 +46,7 @@ class TeamArticleList extends ConsumerWidget {
                   debugPrint(
                     '[TeamArticleList] Navigating to detail for articleId: ${articles[index].id}',
                   );
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder:
-                          (context) => ArticleDetailScreen(
-                            articleId: articles[index].id,
-                          ),
-                    ),
-                  );
+                  context.push('/article/${articles[index].id}');
                 },
               );
             },

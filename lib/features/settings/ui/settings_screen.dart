@@ -202,7 +202,7 @@ class SettingsScreen extends ConsumerWidget {
 
     return Scaffold(
       // --- FIX: Remove the title argument to default to app logo ---
-      appBar: const GlobalAppBar(),
+      appBar: const GlobalAppBar(automaticallyImplyLeading: true),
       // --- End Fix ---
       body: Center(
         // Center and constrain the body content

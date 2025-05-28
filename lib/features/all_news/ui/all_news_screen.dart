@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/features/news_feed/logic/news_feed_provider.dart';
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/headline_story_card.dart';
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/article_list_item.dart';
@@ -9,7 +10,6 @@ import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
 import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
-import 'package:tackle_4_loss/features/article_detail/ui/article_detail_screen.dart';
 
 const double kMaxContentWidth = 1200.0;
 
@@ -46,15 +46,8 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
     debugPrint(
       'AllNewsScreen: Navigating to article detail for articleId: $articleId',
     );
-    // --- Added navigation to ArticleDetailScreen ---
-    Navigator.of(context).push(
-      MaterialPageRoute(
-        builder: (context) => ArticleDetailScreen(articleId: articleId),
-      ),
-    );
-    debugPrint(
-      'AllNewsScreen: Pushed ArticleDetailScreen for articleId: $articleId',
-    );
+    // Navigate using GoRouter
+    context.push('/article/$articleId');
   }
 
   void _onScroll() {
@@ -174,7 +167,7 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
     );
 
     return Scaffold(
-      appBar: const GlobalAppBar(),
+      appBar: const GlobalAppBar(automaticallyImplyLeading: true),
       floatingActionButton: FloatingActionButton(
         mini: true,
         tooltip: 'Filter by Team',

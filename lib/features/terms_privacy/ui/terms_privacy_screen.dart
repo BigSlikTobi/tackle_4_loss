@@ -29,7 +29,10 @@ class TermsPrivacyScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const GlobalAppBar(title: Text('Terms & Privacy')),
+      appBar: const GlobalAppBar(
+        title: Text('Terms & Privacy'),
+        automaticallyImplyLeading: true,
+      ),
       body: WebDetailWrapper(
         child: SafeArea(
           child: SingleChildScrollView(

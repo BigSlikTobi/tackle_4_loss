@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/features/teams/logic/teams_provider.dart';
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
-import 'package:tackle_4_loss/features/teams/ui/team_detail_screen.dart';
 
 class TeamsScreen extends ConsumerWidget {
   const TeamsScreen({super.key});
@@ -19,7 +19,7 @@ class TeamsScreen extends ConsumerWidget {
 
     return Scaffold(
       // --- CORRECT: No title provided, should default to logo ---
-      appBar: const GlobalAppBar(),
+      appBar: const GlobalAppBar(automaticallyImplyLeading: true),
       body: groupedTeamsAsync.when(
         data: (conferenceGroups) {
           if (conferenceGroups.isEmpty) {
@@ -107,15 +107,7 @@ class TeamsScreen extends ConsumerWidget {
                                   debugPrint(
                                     "Navigating to details for ${team.fullName}",
                                   );
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder:
-                                          (context) => TeamDetailScreen(
-                                            teamInfo: team,
-                                          ), // Pass the team object
-                                    ),
-                                  );
+                                  context.push('/team/${team.teamId}');
                                 },
                                 // --- End Updated onTap ---
                               ),
