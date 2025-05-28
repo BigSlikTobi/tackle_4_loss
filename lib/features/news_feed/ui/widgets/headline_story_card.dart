@@ -1,16 +1,14 @@
 // lib/features/news_feed/ui/widgets/headline_story_card.dart
-import 'package:flutter/foundation.dart'; // Added for kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:go_router/go_router.dart'; // Import GoRouter
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-// Removed import for ArticleDetailScreen
-// Import navigation provider to update detail state
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
+// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // No longer needed for this
 
-// Changed to ConsumerStatefulWidget
 class HeadlineStoryCard extends ConsumerStatefulWidget {
   final ArticlePreview article;
 
@@ -30,20 +28,13 @@ class _HeadlineStoryCardState extends ConsumerState<HeadlineStoryCard>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(
-        seconds: 14,
-      ), // Duration for one way pan (40% slower)
-    )..repeat(reverse: true); // Loop and reverse
+      duration: const Duration(seconds: 14),
+    )..repeat(reverse: true);
 
     _alignmentAnimation = AlignmentTween(
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
-    ).animate(
-      CurvedAnimation(
-        parent: _controller,
-        curve: Curves.easeInOut, // Smooth easing for the pan
-      ),
-    );
+    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
 
     _controller.addListener(() {
       if (mounted) {
@@ -93,7 +84,7 @@ class _HeadlineStoryCardState extends ConsumerState<HeadlineStoryCard>
                   shadows: [
                     Shadow(
                       blurRadius: 5.0,
-                      color: Colors.black.withAlpha(153), // 0.6 * 255 = 153
+                      color: Colors.black.withAlpha(153),
                       offset: const Offset(1.5, 1.5),
                     ),
                   ],
@@ -125,8 +116,12 @@ class _HeadlineStoryCardState extends ConsumerState<HeadlineStoryCard>
                 shadowColor: Colors.black.withAlpha((255 * 0.2).round()),
                 child: InkWell(
                   onTap: () {
-                    ref.read(currentDetailArticleIdProvider.notifier).state =
-                        widget.article.id;
+                    debugPrint(
+                      "[HeadlineStoryCard onTap] Navigating to /article/${widget.article.id}",
+                    );
+                    context.push(
+                      '/article/${widget.article.id}',
+                    ); // Use context.push
                   },
                   child: Stack(
                     alignment: Alignment.bottomLeft,
@@ -139,14 +134,11 @@ class _HeadlineStoryCardState extends ConsumerState<HeadlineStoryCard>
                                     widget.article.imageUrl!.isNotEmpty)
                                 ? CachedNetworkImage(
                                   imageUrl: widget.article.imageUrl!,
-                                  // fit: BoxFit.cover, // Removed: Handled by Image widget in imageBuilder
                                   imageBuilder:
                                       (context, imageProvider) => Image(
                                         image: imageProvider,
                                         fit: BoxFit.cover,
-                                        alignment:
-                                            _alignmentAnimation
-                                                .value, // Apply animated alignment
+                                        alignment: _alignmentAnimation.value,
                                       ),
                                   placeholder:
                                       (context, url) =>
@@ -189,11 +181,8 @@ class _HeadlineStoryCardState extends ConsumerState<HeadlineStoryCard>
                         right: 16.0,
                         child: Text(
                           displayHeadline,
-                          style: headlineStyle, // Use responsive headline style
-                          maxLines:
-                              isLargeScreen
-                                  ? 3
-                                  : 3, // Keep maxLines or adjust if needed
+                          style: headlineStyle,
+                          maxLines: isLargeScreen ? 3 : 3,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),

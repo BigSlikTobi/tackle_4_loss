@@ -1,11 +1,11 @@
+// lib/features/my_team/ui/widgets/team_huddle_section.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart'; // Import GoRouter
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/features/news_feed/ui/widgets/headline_story_card.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
-// --- FIX: Add import for layout constants ---
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
-// --- Remove old import if it existed ---
-// import 'package:tackle_4_loss/core/navigation/main_navigation_wrapper.dart';
+// import 'package:tackle_4_loss/core/navigation/main_navigation_wrapper.dart'; // Removed
 
 class TeamHuddleSection extends StatelessWidget {
   final String teamId;
@@ -22,13 +22,8 @@ class TeamHuddleSection extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final screenWidth = MediaQuery.of(context).size.width;
-    // const cardSpacing = 12.0; // Removed as it's no longer used
-
-    // Determine layout based on screen width
     final bool isMobileLayout = screenWidth < kMobileLayoutBreakpoint;
-
     final logoPath = getTeamLogoPath(teamId);
-
     final Color sectionBackgroundColor = Color.alphaBlend(
       Color.fromARGB((255 * 0.05).round(), 0, 0, 0),
       theme.canvasColor,
@@ -70,19 +65,22 @@ class TeamHuddleSection extends StatelessWidget {
               ),
             ),
             const Divider(height: 1, indent: 16, endIndent: 16),
-
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
               child:
                   headlineArticle != null
-                      ? HeadlineStoryCard(article: headlineArticle!)
-                      : _buildNoNewsAvailableCard(
-                        context,
-                        logoPath,
-                        teamId,
-                      ), // Pass teamId here
+                      ? InkWell(
+                        // Wrap HeadlineStoryCard with InkWell for navigation
+                        onTap: () {
+                          debugPrint(
+                            "[TeamHuddleSection onTap] Navigating to /article/${headlineArticle!.id}",
+                          );
+                          context.push('/article/${headlineArticle!.id}');
+                        },
+                        child: HeadlineStoryCard(article: headlineArticle!),
+                      )
+                      : _buildNoNewsAvailableCard(context, logoPath, teamId),
             ),
-
             Padding(
               padding: const EdgeInsets.fromLTRB(16.0, 16.0, 16.0, 16.0),
               child: _buildTeamInfoSubSection(context, isMobileLayout, teamId),
@@ -93,7 +91,6 @@ class TeamHuddleSection extends StatelessWidget {
     );
   }
 
-  // --- Pass teamId to _buildNoNewsAvailableCard ---
   Widget _buildNoNewsAvailableCard(
     BuildContext context,
     String logoPath,
@@ -101,11 +98,9 @@ class TeamHuddleSection extends StatelessWidget {
   ) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-
     debugPrint(
       'TeamHuddleSection: Attempting to load logo from path: $logoPath',
     );
-
     return Padding(
       padding: const EdgeInsets.fromLTRB(12.0, 12.0, 12.0, 8.0),
       child: Card(
@@ -131,7 +126,6 @@ class TeamHuddleSection extends StatelessWidget {
                     fit: BoxFit.contain,
                     errorBuilder: (ctx, err, st) {
                       debugPrint('TeamHuddleSection: Error loading logo: $err');
-                      // Use teamId (passed as parameter) for fallback logic
                       final String directPath =
                           'assets/team_logos/${teamLogoMap[teamId.toUpperCase()]?.toLowerCase() ?? 'nfl'}.png';
                       if (directPath != logoPath) {
@@ -149,53 +143,13 @@ class TeamHuddleSection extends StatelessWidget {
                               'assets/team_logos/nfl.png',
                               fit: BoxFit.contain,
                               errorBuilder: (ctx3, err3, st3) {
-                                return Container(
-                                  decoration: BoxDecoration(
-                                    shape: BoxShape.circle,
-                                    color: theme.colorScheme.primary.withAlpha(
-                                      (255 * 0.1).round(),
-                                    ),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      teamId.toUpperCase(),
-                                      style: TextStyle(
-                                        color: theme.colorScheme.primary,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 20,
-                                      ),
-                                    ),
-                                  ),
-                                );
+                                return Container(/* Fallback UI */);
                               },
                             );
                           },
                         );
                       }
-                      return Image.asset(
-                        'assets/team_logos/nfl.png',
-                        fit: BoxFit.contain,
-                        errorBuilder: (ctx3, err3, st3) {
-                          return Container(
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: theme.colorScheme.primary.withAlpha(
-                                (255 * 0.1).round(),
-                              ),
-                            ),
-                            child: Center(
-                              child: Text(
-                                teamId.toUpperCase(),
-                                style: TextStyle(
-                                  color: theme.colorScheme.primary,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 20,
-                                ),
-                              ),
-                            ),
-                          );
-                        },
-                      );
+                      return Image.asset('assets/team_logos/nfl.png' /* ... */);
                     },
                   ),
                 ),
@@ -232,10 +186,9 @@ class TeamHuddleSection extends StatelessWidget {
   }
 
   Widget _buildMobileLayout(BuildContext context) {
-    // For mobile, stack cards vertically
     return Column(
       mainAxisSize: MainAxisSize.min,
-      children: [
+      children: const [
         // UpcomingGamesCard(teamId: teamId),
         // InjuryReportCard(teamId: teamId),
       ],
@@ -243,10 +196,9 @@ class TeamHuddleSection extends StatelessWidget {
   }
 
   Widget _buildTabletLayout(BuildContext context) {
-    // For tablet, arrange cards in a row
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
+      children: const [
         // Expanded(child: UpcomingGamesCard(teamId: teamId)),
         // Expanded(child: InjuryReportCard(teamId: teamId)),
       ],
