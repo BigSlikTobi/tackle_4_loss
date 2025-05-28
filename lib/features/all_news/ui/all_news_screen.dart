@@ -1,3 +1,4 @@
+// lib/features/all_news/ui/all_news_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -9,11 +10,10 @@ import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
+// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // No longer needed for this
 
-const double kMaxContentWidth = 1200.0;
+const double kMaxContentWidthAllNews = 1200.0; // Renamed to avoid conflict
 
-/// This provider is used to filter the articles by team.
 final allNewsFilterTeamProvider = StateProvider<String?>((ref) => null);
 
 class AllNewsScreen extends ConsumerStatefulWidget {
@@ -39,15 +39,10 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
     super.dispose();
   }
 
-  /// Navigate to article detail screen
-  /// This function updates the currentDetailArticleIdProvider state to show the article detail
   void navigateToArticleDetail(int articleId) {
-    ref.read(currentDetailArticleIdProvider.notifier).state = articleId;
-    debugPrint(
-      'AllNewsScreen: Navigating to article detail for articleId: $articleId',
-    );
-    // Navigate using GoRouter
-    context.push('/article/$articleId');
+    // ref.read(currentDetailArticleIdProvider.notifier).state = articleId; // Remove this line
+    debugPrint('[AllNewsScreen] Navigating to /article/$articleId');
+    context.push('/article/$articleId'); // Use context.push
   }
 
   void _onScroll() {
@@ -116,13 +111,12 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                           borderRadius: BorderRadius.circular(8.0),
                           color:
                               isSelected
-                                  ? Theme.of(
-                                    context,
-                                  ).colorScheme.primary.withValues(alpha: 0.1)
+                                  ? Theme.of(context).colorScheme.primary
+                                      .withOpacity(0.1) // Corrected withOpacity
                                   : Colors.transparent,
                           border:
                               isSelected
-                                  ? null // No border when selected (using shadow)
+                                  ? null
                                   : Border.all(
                                     color: Colors.grey.shade300,
                                     width: 1.0,
@@ -131,14 +125,14 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                               isSelected
                                   ? [
                                     BoxShadow(
-                                      color: Colors.black.withValues(
-                                        alpha: 0.1,
-                                      ),
+                                      color: Colors.black.withOpacity(
+                                        0.1,
+                                      ), // Corrected withOpacity
                                       blurRadius: 8,
                                       offset: const Offset(0, 2),
                                     ),
                                   ]
-                                  : [], // No shadow when not selected
+                                  : [],
                         ),
                         child: Image.asset(
                           getTeamLogoPath(teamAbbreviation),
@@ -172,19 +166,14 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
         mini: true,
         tooltip: 'Filter by Team',
         onPressed: () => _showTeamFilterDialog(context, ref),
-        // --- Add FAB background color and elevation ---
         backgroundColor: Colors.white,
-        foregroundColor:
-            Colors.black, // Adjust if needed for ripple or fallback icon
-        elevation: 4.0, // Add a subtle shadow
-        // --- End Changes ---
+        foregroundColor: Colors.black,
+        elevation: 4.0,
         child: CircleAvatar(
           radius: 20,
-          // --- Make CircleAvatar background transparent as FAB now has the white bg ---
           backgroundColor: Colors.transparent,
-          // --- End Change ---
           child: Padding(
-            padding: const EdgeInsets.all(4.0), // Keep padding for the image
+            padding: const EdgeInsets.all(4.0),
             child: Image.asset(
               getTeamLogoPath(filterTeamId ?? 'NFL'),
               fit: BoxFit.contain,
@@ -195,7 +184,7 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
       ),
       body: Center(
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
+          constraints: const BoxConstraints(maxWidth: kMaxContentWidthAllNews),
           child: RefreshIndicator(
             onRefresh: _handleRefresh,
             child: articlesAsyncValue.when(
@@ -210,7 +199,6 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                         .where((a) => a.id != headlineArticle?.id)
                         .toList();
 
-                // --- Determine if loading next page ---
                 final isLoadingNextPage =
                     articlesAsyncValue.isLoading &&
                     (headlineArticle != null || listArticlesToShow.isNotEmpty);
@@ -251,13 +239,11 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                       SliverToBoxAdapter(
                         child: InkWell(
                           onTap:
-                              () => navigateToArticleDetail(
-                                headlineArticle!.id,
-                              ), // Added null assertion operator
+                              () =>
+                                  navigateToArticleDetail(headlineArticle!.id),
                           child: HeadlineStoryCard(article: headlineArticle),
                         ),
                       ),
-
                     SliverPadding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 8.0,
@@ -266,7 +252,6 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
-                            // --- Show loading indicator at the end ---
                             if (index == listArticlesToShow.length &&
                                 isLoadingNextPage) {
                               return const Padding(
@@ -282,16 +267,14 @@ class _AllNewsScreenState extends ConsumerState<AllNewsScreen> {
                                     () => navigateToArticleDetail(article.id),
                               );
                             }
-                            return null; // Should not happen with correct childCount
+                            return null;
                           },
-                          // --- Adjust childCount for loading indicator ---
                           childCount:
                               listArticlesToShow.length +
                               (isLoadingNextPage ? 1 : 0),
                         ),
                       ),
                     ),
-                    // --- Add a fallback loading indicator if the list is empty but loading more ---
                     if (headlineArticle == null &&
                         listArticlesToShow.isEmpty &&
                         isLoadingNextPage)

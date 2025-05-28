@@ -1,11 +1,13 @@
+// lib/features/news_feed/ui/widgets/other_news_list_item.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart'; // Import GoRouter
 import 'package:intl/intl.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
+// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // No longer needed for this
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
-import 'package:tackle_4_loss/core/constants/source_constants.dart'; // Ensure this is imported
+import 'package:tackle_4_loss/core/constants/source_constants.dart';
 
 class OtherNewsListItem extends ConsumerWidget {
   final ArticlePreview article;
@@ -26,34 +28,30 @@ class OtherNewsListItem extends ConsumerWidget {
                 ? article.englishHeadline
                 : "No Title");
 
-    // --- CORRECTED Source Name Logic ---
     String sourceDisplay;
     if (article.source != null &&
         sourceIdToDisplayName.containsKey(article.source)) {
       sourceDisplay = sourceIdToDisplayName[article.source!]!;
     } else if (article.source != null) {
-      // Fallback if ID exists but not in map: show "Source X"
       sourceDisplay = "Source ${article.source}";
     } else {
-      // Fallback if source field is null
       sourceDisplay = "";
     }
-    // --- END CORRECTION ---
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       elevation: 1.0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-      clipBehavior: Clip.antiAlias, // Ensures InkWell splash is clipped
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
           debugPrint(
-            "Tapped Other News Item ${article.id}. Navigating to detail.",
+            "[OtherNewsListItem onTap] Navigating to /article/${article.id}",
           );
-          ref.read(currentDetailArticleIdProvider.notifier).state = article.id;
+          context.push('/article/${article.id}'); // Use context.push
         },
         child: Padding(
-          padding: const EdgeInsets.all(16.0), // Increased internal padding
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -71,7 +69,6 @@ class OtherNewsListItem extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      // Use the resolved sourceDisplay
                       "$sourceDisplay${article.createdAt != null ? " • ${DateFormat.yMd(currentLocale.languageCode).format(article.createdAt!.toLocal())}" : ""}",
                       style: textTheme.bodySmall?.copyWith(
                         color: Colors.grey[600],
@@ -95,14 +92,15 @@ class OtherNewsListItem extends ConsumerWidget {
                         child: ClipOval(
                           child: Image.asset(
                             getTeamLogoPath(article.teamId!),
-                            height: 32, // Changed from 18 to 32
-                            width: 32, // Changed from 18 to 32
+                            height: 32,
+                            width: 32,
                             fit: BoxFit.contain,
                             errorBuilder:
                                 (ctx, err, st) => const SizedBox(
-                                  width: 54,
-                                  height: 54,
-                                ), // Changed from 18 to 54
+                                  width:
+                                      54, // Was 32, keeping 32 to match height
+                                  height: 32,
+                                ),
                           ),
                         ),
                       ),
