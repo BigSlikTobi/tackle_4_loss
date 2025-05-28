@@ -1,8 +1,6 @@
 // lib/features/article_detail/ui/article_detail_screen.dart
-// lib/features/article_detail/ui/article_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart'; // Import GoRouter for pop
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -14,10 +12,12 @@ import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:tackle_4_loss/features/article_detail/logic/article_detail_provider.dart';
-// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // Removed currentDetailArticleIdProvider
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
 import 'package:tackle_4_loss/core/widgets/web_detail_wrapper.dart';
+
+// Define your app's base URL (replace with your actual production domain)
+const String kAppBaseUrl = "https://tackle4loss.com"; // Or from env config
 
 class ArticleDetailScreen extends ConsumerWidget {
   final int articleId;
@@ -25,7 +25,6 @@ class ArticleDetailScreen extends ConsumerWidget {
   const ArticleDetailScreen({super.key, required this.articleId});
 
   Future<void> _launchUrl(Uri url, BuildContext context, WidgetRef ref) async {
-    // ref is not used in this method currently, but kept for future consistency if needed
     final articleValue = ref.read(articleDetailProvider(articleId)).valueOrNull;
     final sourceDomain =
         articleValue?.sourceUrl != null
@@ -57,31 +56,10 @@ class ArticleDetailScreen extends ConsumerWidget {
       'ArticleDetailScreen: Building screen for articleId: $articleId',
     );
 
-    Widget? leadingWidget;
-    // The GlobalAppBar will determine its leading widget based on GoRouter.canPop()
-    // If a specific behavior is needed for this screen's back button beyond default pop,
-    // it can be provided via the `leading` parameter to GlobalAppBar.
-    // For now, let GlobalAppBar handle it.
-    // Example: if we needed to do something specific before popping:
-    // if (GoRouter.of(context).canPop()) {
-    //   leadingWidget = IconButton(
-    //     icon: const Icon(Icons.arrow_back_ios), // Or Icons.arrow_back for Material
-    //     tooltip: MaterialLocalizations.of(context).backButtonTooltip,
-    //     onPressed: () {
-    //       debugPrint('ArticleDetailScreen: Custom back logic if any, then pop.');
-    //       // ref.read(currentDetailArticleIdProvider.notifier).state = null; // REMOVED THIS LINE
-    //       GoRouter.of(context).pop();
-    //     },
-    //   );
-    // }
-
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: GlobalAppBar(
-        // GlobalAppBar will handle its own back/home button now
-        // leading: leadingWidget, // Let GlobalAppBar decide its leading widget
-        automaticallyImplyLeading:
-            true, // This ensures GlobalAppBar tries to show a back button if canPop
+        automaticallyImplyLeading: true,
         actions: articleAsyncValue.maybeWhen(
           data:
               (article) => [
@@ -91,16 +69,16 @@ class ArticleDetailScreen extends ConsumerWidget {
                     final title = article.getLocalizedHeadline(
                       currentLocale.languageCode,
                     );
-                    final url = article.sourceUrl;
-                    if (url != null) {
-                      Share.share('$title\n\n$url');
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('No URL available to share'),
-                        ),
-                      );
-                    }
+                    // Construct the canonical URL for this article within your app
+                    final String appArticleUrl =
+                        "$kAppBaseUrl/article/${article.id}";
+
+                    debugPrint(
+                      "[ArticleDetailScreen Share] Sharing title: '$title', URL: '$appArticleUrl'",
+                    );
+                    Share.share(
+                      '$title\n\n$appArticleUrl',
+                    ); // Use the app's article URL
                   },
                   tooltip: 'Share Article',
                 ),

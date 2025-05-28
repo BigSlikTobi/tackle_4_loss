@@ -1,5 +1,4 @@
 // lib/core/providers/navigation_provider.dart
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart'; // For debugPrint
 
 // --- selectedNavIndexProvider was REMOVED in the previous commit ---
