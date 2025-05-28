@@ -1,9 +1,11 @@
+// lib/features/news_feed/ui/widgets/article_grid_item.dart
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart'; // Import GoRouter
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
+// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // Removed currentDetailArticleIdProvider
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
 
 class ArticleGridItem extends ConsumerWidget {
@@ -17,7 +19,6 @@ class ArticleGridItem extends ConsumerWidget {
     final textTheme = theme.textTheme;
     final currentLocale = ref.watch(localeNotifierProvider);
 
-    // Log to help debug
     debugPrint(
       "Building ArticleGridItem for id: ${article.id}, with image URL: ${article.imageUrl}",
     );
@@ -30,7 +31,6 @@ class ArticleGridItem extends ConsumerWidget {
                 ? article.englishHeadline
                 : "No Title");
 
-    // Use AspectRatio for responsive sizing instead of fixed height
     return Card(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
@@ -40,15 +40,21 @@ class ArticleGridItem extends ConsumerWidget {
         child: InkWell(
           onTap: () {
             debugPrint(
-              "Tapped Article Grid Item ${article.id}. Navigating to detail.",
-            );
-            ref.read(currentDetailArticleIdProvider.notifier).state =
-                article.id;
+              "[ArticleGridItem onTap] Tapped Article Grid Item ${article.id}. Navigating to /cluster/${article.id}",
+            ); // Assuming article.id here is clusterId for StoryLine
+            // This widget seems to be for ArticlePreview which has an `id` and sometimes `teamId`
+            // If this is for a "StoryLineItem" which has clusterId, the navigation should be to /cluster/:clusterId
+            // Based on the name "ArticleGridItem" and "ArticlePreview article", it should navigate to /article/:id
+            // The log message in the original code was confusing.
+            // If `article.id` is the correct ID for an article detail:
+            context.push('/article/${article.id}');
+            // If this item actually represents a cluster and `article.id` is `clusterId`:
+            // context.push('/cluster/${article.id}');
+            // For now, assuming it's an article.
           },
           child: Stack(
             fit: StackFit.passthrough,
             children: [
-              // Background Image with fixed height
               if (article.imageUrl != null && article.imageUrl!.isNotEmpty)
                 Positioned.fill(
                   child: CachedNetworkImage(
@@ -78,8 +84,6 @@ class ArticleGridItem extends ConsumerWidget {
                     ),
                   ),
                 ),
-
-              // Gradient overlay for text
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
@@ -95,8 +99,6 @@ class ArticleGridItem extends ConsumerWidget {
                   ),
                 ),
               ),
-
-              // Text Title Overlay at Bottom with LayoutBuilder
               Positioned(
                 bottom: 8,
                 left: 8,
@@ -135,8 +137,6 @@ class ArticleGridItem extends ConsumerWidget {
                   },
                 ),
               ),
-
-              // Team logo in top right corner (replacing three-dot menu)
               if (article.teamId != null && article.teamId!.isNotEmpty)
                 Positioned(
                   top: 8.0,
@@ -167,7 +167,9 @@ class ArticleGridItem extends ConsumerWidget {
                             child: Text(
                               article.teamId!.substring(
                                 0,
-                                min(3, article.teamId!.length),
+                                article.teamId!.length < 3
+                                    ? article.teamId!.length
+                                    : 3, // Safe substring
                               ),
                               style: const TextStyle(
                                 fontSize: 9,
@@ -186,9 +188,4 @@ class ArticleGridItem extends ConsumerWidget {
       ),
     );
   }
-}
-
-// Helper function to handle string length safely
-int min(int a, int b) {
-  return a < b ? a : b;
 }

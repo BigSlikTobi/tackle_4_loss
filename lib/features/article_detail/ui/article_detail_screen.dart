@@ -1,33 +1,31 @@
 // lib/features/article_detail/ui/article_detail_screen.dart
+// lib/features/article_detail/ui/article_detail_screen.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart'; // Import GoRouter for pop
 import 'package:intl/intl.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_html/flutter_html.dart';
 import 'package:share_plus/share_plus.dart';
 
-// Add GlobalAppBar import back
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/core/widgets/error_message.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:tackle_4_loss/features/article_detail/logic/article_detail_provider.dart';
-// Import navigation provider to trigger back navigation state change
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
-// Import layout constants for responsive design
+// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // Removed currentDetailArticleIdProvider
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
-// Import AppColors for consistent theming
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
-import 'package:tackle_4_loss/core/widgets/web_detail_wrapper.dart'; // Import WebDetailWrapper
+import 'package:tackle_4_loss/core/widgets/web_detail_wrapper.dart';
 
 class ArticleDetailScreen extends ConsumerWidget {
   final int articleId;
 
   const ArticleDetailScreen({super.key, required this.articleId});
 
-  // _launchUrl remains the same, accepting ref
   Future<void> _launchUrl(Uri url, BuildContext context, WidgetRef ref) async {
+    // ref is not used in this method currently, but kept for future consistency if needed
     final articleValue = ref.read(articleDetailProvider(articleId)).valueOrNull;
     final sourceDomain =
         articleValue?.sourceUrl != null
@@ -55,37 +53,38 @@ class ArticleDetailScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
 
-    // Log debugging information about our appBar construction
     debugPrint(
       'ArticleDetailScreen: Building screen for articleId: $articleId',
     );
-    debugPrint('ArticleDetailScreen: Using GlobalAppBar with default app logo');
 
-    // Implement proper scaffold pattern with GlobalAppBar
+    Widget? leadingWidget;
+    // The GlobalAppBar will determine its leading widget based on GoRouter.canPop()
+    // If a specific behavior is needed for this screen's back button beyond default pop,
+    // it can be provided via the `leading` parameter to GlobalAppBar.
+    // For now, let GlobalAppBar handle it.
+    // Example: if we needed to do something specific before popping:
+    // if (GoRouter.of(context).canPop()) {
+    //   leadingWidget = IconButton(
+    //     icon: const Icon(Icons.arrow_back_ios), // Or Icons.arrow_back for Material
+    //     tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+    //     onPressed: () {
+    //       debugPrint('ArticleDetailScreen: Custom back logic if any, then pop.');
+    //       // ref.read(currentDetailArticleIdProvider.notifier).state = null; // REMOVED THIS LINE
+    //       GoRouter.of(context).pop();
+    //     },
+    //   );
+    // }
+
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
       appBar: GlobalAppBar(
-        // Don't provide a title to ensure the default app logo is shown
-        // This ensures consistent branding across all screens
-        automaticallyImplyLeading: true, // Keep the back button in app bar
-        leading:
-            Navigator.canPop(context)
-                ? null
-                : IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  tooltip: 'Back',
-                  onPressed: () {
-                    debugPrint(
-                      'ArticleDetailScreen: Custom back button pressed, resetting currentDetailArticleIdProvider',
-                    );
-                    ref.read(currentDetailArticleIdProvider.notifier).state =
-                        null;
-                  },
-                ),
+        // GlobalAppBar will handle its own back/home button now
+        // leading: leadingWidget, // Let GlobalAppBar decide its leading widget
+        automaticallyImplyLeading:
+            true, // This ensures GlobalAppBar tries to show a back button if canPop
         actions: articleAsyncValue.maybeWhen(
           data:
               (article) => [
-                // Share button only - removed refresh button
                 IconButton(
                   icon: const Icon(Icons.share),
                   onPressed: () {
@@ -109,24 +108,18 @@ class ArticleDetailScreen extends ConsumerWidget {
           orElse: () => null,
         ),
       ),
-      // Apply responsive layout to body content
       body: WebDetailWrapper(
-        // Wrap the body's content
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: kMaxContentWidth,
-            ), // This might be redundant if WebDetailWrapper handles it
+            constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
             child: articleAsyncValue.when(
               loading: () => const Center(child: LoadingIndicator()),
               error:
                   (error, stackTrace) => Padding(
-                    // Add padding around error msg
                     padding: const EdgeInsets.all(16.0),
                     child: ErrorMessageWidget(
                       message:
                           'Failed to load article details.\n${error.toString()}',
-                      // Retry still invalidates the provider
                       onRetry:
                           () =>
                               ref.invalidate(articleDetailProvider(articleId)),
@@ -142,9 +135,7 @@ class ArticleDetailScreen extends ConsumerWidget {
                         ? Uri.tryParse(article.sourceUrl!)
                         : null;
 
-                // --- Content is wrapped in SingleChildScrollView ---
                 return SingleChildScrollView(
-                  // Add padding here for the content area
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16.0,
                     vertical: 12.0,
@@ -152,8 +143,6 @@ class ArticleDetailScreen extends ConsumerWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Include article title at the top of the content for clarity
-                      // This way we keep the app logo in the AppBar but still prominently show the title
                       Text(
                         headline,
                         style: textTheme.headlineMedium?.copyWith(
@@ -161,8 +150,6 @@ class ArticleDetailScreen extends ConsumerWidget {
                         ),
                       ),
                       const SizedBox(height: 8),
-
-                      // 1. Primary Image
                       if (primaryImageUrl != null)
                         Padding(
                           padding: const EdgeInsets.only(bottom: 16.0),
@@ -194,10 +181,6 @@ class ArticleDetailScreen extends ConsumerWidget {
                           ),
                         ),
                       const SizedBox(height: 8),
-
-                      // Skip repeating headline as we added it at the top
-
-                      // 3. Source & Date Row
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -226,8 +209,6 @@ class ArticleDetailScreen extends ConsumerWidget {
                       const SizedBox(height: 16),
                       const Divider(),
                       const SizedBox(height: 16),
-
-                      // 4. Content
                       if (htmlContent != null && htmlContent.isNotEmpty)
                         Html(
                           data: htmlContent,
@@ -285,8 +266,6 @@ class ArticleDetailScreen extends ConsumerWidget {
                           ),
                         ),
                       const SizedBox(height: 24),
-
-                      // 5. Source Link Button
                       if (sourceUri != null && article.sourceUrl != null)
                         Center(
                           child: TextButton.icon(

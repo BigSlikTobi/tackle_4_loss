@@ -1,13 +1,14 @@
 // lib/core/navigation/main_navigation_wrapper.dart
+// Quick check: Ensure no lingering selectedNavIndexProvider usage.
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/core/navigation/app_navigation.dart';
-// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // currentDetailArticleIdProvider is being deprecated
+// import 'package:tackle_4_loss/core/providers/navigation_provider.dart'; // selectedNavIndexProvider was here
 import 'package:tackle_4_loss/core/widgets/global_app_bar.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart';
-// ArticleDetailScreen is no longer imported or shown directly by MainNavigationWrapper
 import 'package:tackle_4_loss/core/providers/realtime_provider.dart';
 import 'package:tackle_4_loss/features/more/ui/more_options_sheet_content.dart';
 import 'package:tackle_4_loss/core/constants/layout_constants.dart';
@@ -27,8 +28,6 @@ class MainNavigationWrapper extends ConsumerWidget {
         borderRadius: BorderRadius.vertical(top: Radius.circular(16.0)),
       ),
       builder: (BuildContext sheetContext) {
-        // Pass the context from MainNavigationWrapper's build method,
-        // which is under the GoRouter's scope.
         return MoreOptionsSheetContent();
       },
     );
@@ -40,12 +39,10 @@ class MainNavigationWrapper extends ConsumerWidget {
       "[MainNavigationWrapper build] Current navigationShell index: ${navigationShell.currentIndex}. Shell Location: ${GoRouter.of(context).routeInformationProvider.value.uri}",
     );
 
-    // Ensure RealtimeService is initialized
     ref.watch(realtimeServiceProvider);
 
     final currentLocale = ref.watch(localeNotifierProvider);
     final localeNotifier = ref.read(localeNotifierProvider.notifier);
-    // final currentDetailId = ref.watch(currentDetailArticleIdProvider); // DEPRECATED: No longer used here
     final selectedTeam = ref.watch(selectedTeamNotifierProvider).valueOrNull;
 
     final screenWidth = MediaQuery.of(context).size.width;
@@ -55,10 +52,6 @@ class MainNavigationWrapper extends ConsumerWidget {
       (item) => item.label == 'More',
     );
 
-    // The body is now directly the navigationShell.
-    // No more conditional rendering of ArticleDetailScreen here.
-    // Widget bodyContent = navigationShell; // This was simplified
-
     if (isMobileLayout) {
       return Scaffold(
         appBar: GlobalAppBar(
@@ -66,7 +59,7 @@ class MainNavigationWrapper extends ConsumerWidget {
           leading: null,
           actions: const [],
         ),
-        body: navigationShell, // Directly use the shell for the body
+        body: navigationShell,
         bottomNavigationBar: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -74,6 +67,7 @@ class MainNavigationWrapper extends ConsumerWidget {
             BottomNavigationBar(
               currentIndex: navigationShell.currentIndex,
               onTap: (index) {
+                // ref.read(selectedNavIndexProvider.notifier).state = index; // REMOVED: No longer needed to set this
                 debugPrint(
                   "[MainNavigationWrapper BottomNavBar onTap] Tapped index: $index. Current shell index: ${navigationShell.currentIndex}",
                 );
@@ -142,7 +136,6 @@ class MainNavigationWrapper extends ConsumerWidget {
         ),
       );
     } else {
-      // Desktop/Tablet Layout
       final GlobalKey<ScaffoldState> scaffoldKey = GlobalKey<ScaffoldState>();
       return Scaffold(
         key: scaffoldKey,
@@ -211,6 +204,7 @@ class MainNavigationWrapper extends ConsumerWidget {
                   ).colorScheme.primary.withAlpha(26),
                   onTap: () {
                     Navigator.pop(context);
+                    // ref.read(selectedNavIndexProvider.notifier).state = i; // REMOVED
                     debugPrint(
                       "[MainNavigationWrapper Drawer onTap] Tapped index: $i. Current shell index: ${navigationShell.currentIndex}",
                     );
@@ -267,7 +261,7 @@ class MainNavigationWrapper extends ConsumerWidget {
               child: Center(
                 child: ConstrainedBox(
                   constraints: const BoxConstraints(maxWidth: kMaxContentWidth),
-                  child: navigationShell, // Directly use the shell for the body
+                  child: navigationShell,
                 ),
               ),
             ),
