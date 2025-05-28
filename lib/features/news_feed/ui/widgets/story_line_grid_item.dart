@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/features/news_feed/data/story_line_item.dart';
-import 'package:flutter/foundation.dart'; // For kIsWeb
+import 'package:flutter/foundation.dart';
 import 'package:tackle_4_loss/core/theme/app_colors.dart';
 
 String _stripHtml(String htmlText) {
@@ -25,45 +25,45 @@ class StoryLineGridItem extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
-
-    // Determine screen width for responsive layout
     final screenWidth = MediaQuery.of(context).size.width;
-    // Define a breakpoint for mobile-like layout on web
     const mobileLayoutBreakpoint = 960.0;
-
-    // Condition for mobile-style card layout
     final bool useMobileLayout =
         !kIsWeb || (kIsWeb && screenWidth <= mobileLayoutBreakpoint);
 
     if (useMobileLayout) {
-      // --- Mobile Specific Layout (Image left, Text right) ---
       return Card(
         clipBehavior: Clip.antiAlias,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12.0),
         ),
         elevation: 2.0,
-        margin: const EdgeInsets.symmetric(
-          vertical: 4.0,
-          horizontal: 0,
-        ), // Adjusted margin for list-like appearance
+        margin: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 0),
         child: InkWell(
           onTap: () {
+            if (storyLine.clusterId.isEmpty) {
+              debugPrint(
+                "[StoryLineGridItem onTap ERROR] Cluster ID is empty. Cannot navigate.",
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("Error: Story line ID is invalid."),
+                ),
+              );
+              return;
+            }
             debugPrint(
-              "Tapped Story Line Grid Item ${storyLine.clusterId} (Mobile). Navigating to Cluster Detail Screen.",
+              "[StoryLineGridItem onTap] Navigating to /cluster/${storyLine.clusterId}",
             );
             context.push('/cluster/${storyLine.clusterId}');
           },
           child: Padding(
-            // Added padding around the Row
             padding: const EdgeInsets.all(8.0),
             child: Row(
               children: [
                 SizedBox(
-                  width: 80, // Fixed width for the image
-                  height: 80, // Fixed height for the image
+                  width: 80,
+                  height: 80,
                   child: ClipRRect(
-                    // Clip image to rounded corners
                     borderRadius: BorderRadius.circular(8.0),
                     child:
                         storyLine.imageUrl.isNotEmpty
@@ -95,13 +95,11 @@ class StoryLineGridItem extends ConsumerWidget {
                             ),
                   ),
                 ),
-                const SizedBox(width: 12), // Spacing between image and text
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisAlignment:
-                        MainAxisAlignment
-                            .center, // Center text vertically if row is tall
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       Text(
                         _stripHtml(
@@ -115,7 +113,6 @@ class StoryLineGridItem extends ConsumerWidget {
                         maxLines: 3,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      // Optionally, add more details here if needed for mobile
                     ],
                   ),
                 ),
@@ -126,20 +123,29 @@ class StoryLineGridItem extends ConsumerWidget {
       );
     }
 
-    // --- Web/Tablet Specific Layout (Existing Stack-based layout for larger screens) ---
+    // Web/Tablet Specific Layout
     return Card(
       clipBehavior: Clip.antiAlias,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12.0)),
       elevation: 2.0,
       child: InkWell(
         onTap: () {
+          if (storyLine.clusterId.isEmpty) {
+            debugPrint(
+              "[StoryLineGridItem onTap ERROR] Cluster ID is empty. Cannot navigate.",
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Error: Story line ID is invalid.")),
+            );
+            return;
+          }
           debugPrint(
-            "Tapped Story Line Grid Item ${storyLine.clusterId}. Navigating to Cluster Detail Screen.",
+            "[StoryLineGridItem onTap] Navigating to /cluster/${storyLine.clusterId}",
           );
           context.push('/cluster/${storyLine.clusterId}');
         },
         child: Stack(
-          fit: StackFit.expand, // Stack will also fill the Card
+          fit: StackFit.expand,
           children: [
             if (storyLine.imageUrl.isNotEmpty)
               Positioned.fill(
@@ -162,14 +168,12 @@ class StoryLineGridItem extends ConsumerWidget {
             else
               Positioned.fill(
                 child: Container(
-                  color: AppColors.primaryGreen.withAlpha(26), // 0.1 * 255 ≈ 26
+                  color: AppColors.primaryGreen.withAlpha(26),
                   child: Center(
                     child: Icon(
                       Icons.dashboard_customize_outlined,
                       size: 40,
-                      color: AppColors.primaryGreen.withAlpha(
-                        128,
-                      ), // 0.5 * 255 ≈ 128
+                      color: AppColors.primaryGreen.withAlpha(128),
                     ),
                   ),
                 ),
@@ -178,10 +182,7 @@ class StoryLineGridItem extends ConsumerWidget {
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [
-                      Colors.transparent,
-                      Colors.black.withAlpha(191), // 0.75 * 255 ≈ 191
-                    ],
+                    colors: [Colors.transparent, Colors.black.withAlpha(191)],
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
                     stops: const [0.5, 1.0],
@@ -205,7 +206,7 @@ class StoryLineGridItem extends ConsumerWidget {
                         : 'No Title Available',
                   ),
                   style: const TextStyle(
-                    fontSize: 14.0, // Readable font size
+                    fontSize: 14.0,
                     fontWeight: FontWeight.w600,
                     color: Colors.white,
                   ),

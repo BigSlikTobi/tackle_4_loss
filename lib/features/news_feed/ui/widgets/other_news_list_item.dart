@@ -1,11 +1,12 @@
+// lib/features/news_feed/ui/widgets/other_news_list_item.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:tackle_4_loss/features/news_feed/data/article_preview.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-import 'package:tackle_4_loss/core/providers/navigation_provider.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
-import 'package:tackle_4_loss/core/constants/source_constants.dart'; // Ensure this is imported
+import 'package:tackle_4_loss/core/constants/source_constants.dart';
 
 class OtherNewsListItem extends ConsumerWidget {
   final ArticlePreview article;
@@ -26,34 +27,90 @@ class OtherNewsListItem extends ConsumerWidget {
                 ? article.englishHeadline
                 : "No Title");
 
-    // --- CORRECTED Source Name Logic ---
     String sourceDisplay;
     if (article.source != null &&
         sourceIdToDisplayName.containsKey(article.source)) {
       sourceDisplay = sourceIdToDisplayName[article.source!]!;
     } else if (article.source != null) {
-      // Fallback if ID exists but not in map: show "Source X"
       sourceDisplay = "Source ${article.source}";
     } else {
-      // Fallback if source field is null
       sourceDisplay = "";
     }
-    // --- END CORRECTION ---
+
+    debugPrint(
+      "[OtherNewsListItem build] Building for article ID: ${article.id}, Headline: $headlineToShow",
+    );
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
       elevation: 1.0,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
-      clipBehavior: Clip.antiAlias, // Ensures InkWell splash is clipped
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: () {
+          debugPrint("-----------------------------------------");
           debugPrint(
-            "Tapped Other News Item ${article.id}. Navigating to detail.",
+            "[OtherNewsListItem onTap CALLED!] Article ID: ${article.id}, Headline: $headlineToShow",
           );
-          ref.read(currentDetailArticleIdProvider.notifier).state = article.id;
+          if (article.id == 0) {
+            debugPrint(
+              "[OtherNewsListItem onTap ERROR] Article ID is 0 or invalid. Cannot navigate.",
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Error: Article ID is invalid.")),
+            );
+            debugPrint("-----------------------------------------");
+            return;
+          }
+
+          final String targetPath = '/article/${article.id}';
+          final rootNavigatorContext =
+              GoRouter.of(context).routerDelegate.navigatorKey.currentContext;
+          final currentLocation =
+              GoRouter.of(
+                context,
+              ).routeInformationProvider.value.uri.toString();
+
+          debugPrint(
+            "[OtherNewsListItem onTap PRE-PUSH] Current location: $currentLocation. Attempting to push '$targetPath' onto root navigator.",
+          );
+
+          try {
+            if (rootNavigatorContext != null) {
+              GoRouter.of(rootNavigatorContext).push(targetPath);
+              debugPrint(
+                "[OtherNewsListItem onTap POST-PUSH] Pushed '$targetPath' using rootNavigatorContext.",
+              );
+            } else {
+              debugPrint(
+                "[OtherNewsListItem onTap WARNING] Root navigator context is null. Falling back to standard context.push for '$targetPath'.",
+              );
+              GoRouter.of(context).push(targetPath);
+              debugPrint(
+                "[OtherNewsListItem onTap POST-PUSH] Pushed '$targetPath' using standard context (fallback).",
+              );
+            }
+
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (context.mounted) {
+                debugPrint(
+                  "[OtherNewsListItem onTap POST-FRAME] GoRouter location after push: ${GoRouter.of(context).routeInformationProvider.value.uri.toString()}",
+                );
+              }
+            });
+          } catch (e, s) {
+            debugPrint(
+              "[OtherNewsListItem onTap ERROR ON PUSH] Failed to push for '$targetPath'. Error: $e",
+            );
+            debugPrint("Stacktrace: $s");
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text("Error navigating: $e")));
+          }
+          debugPrint("-----------------------------------------");
         },
         child: Padding(
-          padding: const EdgeInsets.all(16.0), // Increased internal padding
+          padding: const EdgeInsets.all(16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -71,7 +128,6 @@ class OtherNewsListItem extends ConsumerWidget {
                 children: [
                   Expanded(
                     child: Text(
-                      // Use the resolved sourceDisplay
                       "$sourceDisplay${article.createdAt != null ? " • ${DateFormat.yMd(currentLocale.languageCode).format(article.createdAt!.toLocal())}" : ""}",
                       style: textTheme.bodySmall?.copyWith(
                         color: Colors.grey[600],
@@ -95,14 +151,12 @@ class OtherNewsListItem extends ConsumerWidget {
                         child: ClipOval(
                           child: Image.asset(
                             getTeamLogoPath(article.teamId!),
-                            height: 32, // Changed from 18 to 32
-                            width: 32, // Changed from 18 to 32
+                            height: 32,
+                            width: 32,
                             fit: BoxFit.contain,
                             errorBuilder:
-                                (ctx, err, st) => const SizedBox(
-                                  width: 54,
-                                  height: 54,
-                                ), // Changed from 18 to 54
+                                (ctx, err, st) =>
+                                    const SizedBox(width: 32, height: 32),
                           ),
                         ),
                       ),

@@ -1,8 +1,12 @@
+// lib/core/navigation/app_router.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/core/navigation/main_navigation_wrapper.dart';
+import 'package:tackle_4_loss/features/news_feed/ui/news_feed_screen.dart';
+import 'package:tackle_4_loss/features/my_team/ui/my_team_screen.dart';
+import 'package:tackle_4_loss/features/schedule/ui/schedule_screen.dart';
 import 'package:tackle_4_loss/features/all_news/ui/all_news_screen.dart';
 import 'package:tackle_4_loss/features/teams/ui/teams_screen.dart';
 import 'package:tackle_4_loss/features/standings/ui/standings_screen.dart';
@@ -15,12 +19,8 @@ import 'package:tackle_4_loss/features/news_feed/ui/cluster_article_detail_scree
 import 'package:tackle_4_loss/features/teams/data/team_info.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
 
-// Utility function to create TeamInfo from teamId
 TeamInfo createTeamInfoFromId(String teamId) {
   final fullName = getTeamFullName(teamId);
-
-  // Simple division/conference mapping based on well-known data
-  // In a real app, this would come from a database or API
   final Map<String, Map<String, String>> teamDivisions = {
     'BUF': {'conference': 'AFC', 'division': 'AFC East'},
     'MIA': {'conference': 'AFC', 'division': 'AFC East'},
@@ -55,252 +55,323 @@ TeamInfo createTeamInfoFromId(String teamId) {
     'SF': {'conference': 'NFC', 'division': 'NFC West'},
     'SEA': {'conference': 'NFC', 'division': 'NFC West'},
   };
-
-  final teamInfo = teamDivisions[teamId.toUpperCase()];
-
+  final teamInfoData = teamDivisions[teamId.toUpperCase()];
   return TeamInfo(
     teamId: teamId.toUpperCase(),
     fullName: fullName,
-    division: teamInfo?['division'] ?? 'Unknown Division',
-    conference: teamInfo?['conference'] ?? 'Unknown Conference',
+    division: teamInfoData?['division'] ?? 'Unknown Division',
+    conference: teamInfoData?['conference'] ?? 'Unknown Conference',
   );
 }
 
-// GoRouter configuration
+final GlobalKey<NavigatorState> _rootNavigatorKey = GlobalKey<NavigatorState>(
+  debugLabel: 'root',
+);
+
+// Navigator keys for the branches of the StatefulShellRoute
+final GlobalKey<NavigatorState> _shellNavigatorNewsKey =
+    GlobalKey<NavigatorState>(debugLabel: 'shellNews');
+final GlobalKey<NavigatorState> _shellNavigatorMyTeamKey =
+    GlobalKey<NavigatorState>(debugLabel: 'shellMyTeam');
+final GlobalKey<NavigatorState> _shellNavigatorScheduleKey =
+    GlobalKey<NavigatorState>(debugLabel: 'shellSchedule');
+final GlobalKey<NavigatorState> _shellNavigatorMoreKey =
+    GlobalKey<NavigatorState>(debugLabel: 'shellMore');
+
 final appRouter = GoRouter(
-  initialLocation: '/',
+  navigatorKey: _rootNavigatorKey,
+  initialLocation:
+      '/app/news', // Default to the news screen within the app shell
   debugLogDiagnostics: kDebugMode,
   routes: [
-    // Main shell route - this contains the primary navigation structure
-    ShellRoute(
-      builder: (context, state, child) {
-        return MainNavigationWrapper();
+    // Redirect from the root '/' to the default shell path '/app/news'
+    GoRoute(
+      path: '/',
+      redirect: (_, __) {
+        debugPrint("[GoRouter Redirect] Redirecting from '/' to '/app/news'");
+        return '/app/news'; // Redirect to the default nested route
+      },
+    ),
+
+    // This GoRoute now acts as the parent for the shell, establishing the '/app' base path.
+    GoRoute(
+      path: '/app',
+      // This parent GoRoute for the shell does not need a builder itself if all its children (the branches)
+      // are defined within the StatefulShellRoute.
+      // Or, if '/app' itself should be navigable and redirect, it can do that.
+      // For initialLocation '/app/news', we need a way for '/app' to resolve.
+      // One way is to redirect '/app' to '/app/news'.
+      redirect: (context, state) {
+        // If the user navigates to just '/app', redirect them to the default news tab.
+        if (state.uri.toString() == '/app') {
+          debugPrint(
+            "[GoRouter Redirect] Redirecting from '/app' to '/app/news'",
+          );
+          return '/app/news';
+        }
+        return null; // No redirect if path is more specific like /app/news
       },
       routes: [
-        // Home/News Feed
-        GoRoute(
-          path: '/',
-          name: 'home',
-          pageBuilder:
-              (context, state) => const NoTransitionPage(
-                child:
-                    SizedBox.shrink(), // MainNavigationWrapper handles the content
-              ),
-        ),
+        // The StatefulShellRoute is now a child of the '/app' GoRoute
+        StatefulShellRoute.indexedStack(
+          builder: (
+            BuildContext context,
+            GoRouterState state,
+            StatefulNavigationShell navigationShell,
+          ) {
+            debugPrint(
+              "[GoRouter StatefulShellRoute.builder under /app] Building MainNavigationWrapper. Current shell index: ${navigationShell.currentIndex}, Shell effective path: ${state.uri}, matchedLocation: ${state.matchedLocation}",
+            );
+            return MainNavigationWrapper(navigationShell: navigationShell);
+          },
+          branches: <StatefulShellBranch>[
+            // Branch 1: News Feed
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorNewsKey,
+              routes: <RouteBase>[
+                GoRoute(
+                  path:
+                      'news', // Path is now relative to '/app', so full path is '/app/news'
+                  name: 'app-news', // Unique name
+                  pageBuilder: (context, state) {
+                    debugPrint(
+                      "[GoRouter ShellBranch News ('/app/news')] Building NewsFeedScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+                    );
+                    return const NoTransitionPage(child: NewsFeedScreen());
+                  },
+                ),
+              ],
+            ),
 
-        // News Feed (explicit route)
-        GoRoute(
-          path: '/news',
-          name: 'news',
-          pageBuilder:
-              (context, state) =>
-                  const NoTransitionPage(child: SizedBox.shrink()),
-        ),
+            // Branch 2: My Team
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorMyTeamKey,
+              routes: <RouteBase>[
+                GoRoute(
+                  path: 'my-team', // Relative, full path is '/app/my-team'
+                  name: 'app-my-team',
+                  pageBuilder: (context, state) {
+                    debugPrint(
+                      "[GoRouter ShellBranch MyTeam ('/app/my-team')] Building MyTeamScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+                    );
+                    return const NoTransitionPage(child: MyTeamScreen());
+                  },
+                ),
+              ],
+            ),
 
-        // My Team
-        GoRoute(
-          path: '/my-team',
-          name: 'my-team',
-          pageBuilder:
-              (context, state) =>
-                  const NoTransitionPage(child: SizedBox.shrink()),
-        ),
+            // Branch 3: Schedule
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorScheduleKey,
+              routes: <RouteBase>[
+                GoRoute(
+                  path: 'schedule', // Relative, full path is '/app/schedule'
+                  name: 'app-schedule',
+                  pageBuilder: (context, state) {
+                    debugPrint(
+                      "[GoRouter ShellBranch Schedule ('/app/schedule')] Building ScheduleScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+                    );
+                    return const NoTransitionPage(child: ScheduleScreen());
+                  },
+                ),
+              ],
+            ),
 
-        // Schedule
-        GoRoute(
-          path: '/schedule',
-          name: 'schedule',
-          pageBuilder:
-              (context, state) =>
-                  const NoTransitionPage(child: SizedBox.shrink()),
+            // Branch 4: More (placeholder)
+            StatefulShellBranch(
+              navigatorKey: _shellNavigatorMoreKey,
+              routes: <RouteBase>[
+                GoRoute(
+                  path:
+                      'more-placeholder', // Relative, full path is '/app/more-placeholder'
+                  name: 'app-more-placeholder',
+                  pageBuilder: (context, state) {
+                    debugPrint(
+                      "[GoRouter ShellBranch More ('/app/more-placeholder')] Building More placeholder. Path: ${state.uri}, FullPath: ${state.fullPath}",
+                    );
+                    return const NoTransitionPage(child: SizedBox.shrink());
+                  },
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     ),
 
-    // Routes that need their own screens (outside the main navigation)
-    // All News
+    // --- Top-level routes (screens without the main navigation shell) ---
+    // These are siblings to the '/app' route.
     GoRoute(
       path: '/all-news',
       name: 'all-news',
-      builder: (context, state) => AllNewsScreen(),
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        debugPrint(
+          "[GoRouter TopLevelRoute /all-news] Building AllNewsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
+        return const AllNewsScreen();
+      },
     ),
-
-    // Teams
     GoRoute(
       path: '/teams',
       name: 'teams',
-      builder: (context, state) => TeamsScreen(),
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        debugPrint(
+          "[GoRouter TopLevelRoute /teams] Building TeamsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
+        return const TeamsScreen();
+      },
     ),
-
-    // Standings
     GoRoute(
       path: '/standings',
       name: 'standings',
-      builder: (context, state) => StandingsScreen(),
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        debugPrint(
+          "[GoRouter TopLevelRoute /standings] Building StandingsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
+        return const StandingsScreen();
+      },
     ),
-
-    // Settings
     GoRoute(
       path: '/settings',
       name: 'settings',
-      builder: (context, state) => SettingsScreen(),
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        debugPrint(
+          "[GoRouter TopLevelRoute /settings] Building SettingsScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
+        return const SettingsScreen();
+      },
     ),
-
-    // Terms & Privacy
     GoRoute(
       path: '/terms-privacy',
       name: 'terms-privacy',
-      builder: (context, state) => TermsPrivacyScreen(),
+      parentNavigatorKey: _rootNavigatorKey,
+      builder: (context, state) {
+        debugPrint(
+          "[GoRouter TopLevelRoute /terms-privacy] Building TermsPrivacyScreen. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
+        return const TermsPrivacyScreen();
+      },
     ),
-
-    // Article Detail
     GoRoute(
       path: '/article/:articleId',
       name: 'article-detail',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final articleIdStr = state.pathParameters['articleId']!;
         final articleId = int.tryParse(articleIdStr);
         if (articleId == null) {
-          // Handle invalid article ID
           return Scaffold(
             appBar: AppBar(title: const Text('Error')),
             body: const Center(child: Text('Invalid article ID')),
           );
         }
+        debugPrint(
+          "[GoRouter TopLevelRoute /article/:articleId] Building ArticleDetailScreen for ID: $articleId. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
         return ArticleDetailScreen(articleId: articleId);
       },
     ),
-
-    // Team Detail
     GoRoute(
       path: '/team/:teamId',
       name: 'team-detail',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final teamId = state.pathParameters['teamId']!;
         final teamInfo = createTeamInfoFromId(teamId);
+        debugPrint(
+          "[GoRouter TopLevelRoute /team/:teamId] Building TeamDetailScreen for ID: $teamId. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
         return TeamDetailScreen(teamInfo: teamInfo);
       },
     ),
-
-    // Cluster Detail
     GoRoute(
       path: '/cluster/:clusterId',
       name: 'cluster-detail',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final clusterId = state.pathParameters['clusterId']!;
+        debugPrint(
+          "[GoRouter TopLevelRoute /cluster/:clusterId] Building ClusterDetailScreen for ID: $clusterId. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
         return ClusterDetailScreen(clusterId: clusterId);
       },
     ),
-
-    // Cluster Article Detail
     GoRoute(
       path: '/cluster-article/:clusterArticleId',
       name: 'cluster-article-detail',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final clusterArticleId = state.pathParameters['clusterArticleId']!;
+        debugPrint(
+          "[GoRouter TopLevelRoute /cluster-article/:id] Building ClusterArticleDetailScreen for ID: $clusterArticleId. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
         return ClusterArticleDetailScreen(clusterArticleId: clusterArticleId);
       },
     ),
-
-    // Sitemap XML route for SEO
     GoRoute(
       path: '/sitemap.xml',
       name: 'sitemap',
-      redirect: (context, state) {
-        // For Flutter web, the sitemap.xml file is served directly from the web directory
-        // This route exists to ensure GoRouter doesn't handle it as a 404
-        // The actual sitemap.xml file will be served by the web server
-        return null; // Don't redirect, let the route handle it normally
-      },
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        // This should rarely be called since the web server should serve the static file directly
+        debugPrint(
+          "[GoRouter TopLevelRoute /sitemap.xml] Building Sitemap placeholder. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
         return Scaffold(
           appBar: AppBar(title: const Text('Sitemap')),
           body: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.map, size: 64),
-                SizedBox(height: 16),
-                Text(
-                  'Sitemap XML',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'The sitemap is available for search engines at /sitemap.xml',
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+            child: Text('Sitemap.xml is served by the web server.'),
           ),
         );
       },
     ),
-
-    // Robots.txt route for SEO
     GoRoute(
       path: '/robots.txt',
       name: 'robots',
-      redirect: (context, state) {
-        // For Flutter web, the robots.txt file is served directly from the web directory
-        // This route exists to ensure GoRouter doesn't handle it as a 404
-        // The actual robots.txt file will be served by the web server
-        return null; // Don't redirect, let the route handle it normally
-      },
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
-        // This should rarely be called since the web server should serve the static file directly
+        debugPrint(
+          "[GoRouter TopLevelRoute /robots.txt] Building Robots placeholder. Path: ${state.uri}, FullPath: ${state.fullPath}",
+        );
         return Scaffold(
           appBar: AppBar(title: const Text('Robots')),
           body: const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.smart_toy, size: 64),
-                SizedBox(height: 16),
-                Text(
-                  'Robots.txt',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                SizedBox(height: 8),
-                Text(
-                  'The robots.txt file is available for search engines at /robots.txt',
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
+            child: Text('Robots.txt is served by the web server.'),
           ),
         );
       },
     ),
   ],
-  errorBuilder:
-      (context, state) => Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Page not found',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'The page you requested could not be found.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              ElevatedButton(
-                onPressed: () => context.go('/'),
-                child: const Text('Go Home'),
-              ),
-            ],
-          ),
+  errorBuilder: (context, state) {
+    debugPrint(
+      "[GoRouter ErrorBuilder] Page not found. Error: ${state.error}, Uri: ${state.uri}, FullPath: ${state.fullPath}",
+    );
+    return Scaffold(
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline, size: 64, color: Colors.red),
+            const SizedBox(height: 16),
+            Text(
+              'Page not found for ${state.uri}: ${state.error?.message ?? ''}',
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed:
+                  () =>
+                      context.go('/app/news'), // Go to the default shell route
+              child: const Text('Go Home'),
+            ),
+          ],
         ),
       ),
+    );
+  },
 );
 
-// Provider for GoRouter
 final routerProvider = Provider<GoRouter>((ref) => appRouter);

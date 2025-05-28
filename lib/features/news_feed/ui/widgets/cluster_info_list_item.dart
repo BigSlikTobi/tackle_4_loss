@@ -6,7 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 import 'package:tackle_4_loss/features/news_feed/data/cluster_info.dart';
 import 'package:tackle_4_loss/core/providers/locale_provider.dart';
-// For navigation
 
 class ClusterInfoListItem extends ConsumerWidget {
   final ClusterInfo cluster;
@@ -32,8 +31,17 @@ class ClusterInfoListItem extends ConsumerWidget {
       elevation: 1.5,
       child: InkWell(
         onTap: () {
+          if (cluster.clusterId.isEmpty) {
+            debugPrint(
+              "[ClusterInfoListItem onTap ERROR] Cluster ID is empty. Cannot navigate.",
+            );
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Error: Cluster ID is invalid.")),
+            );
+            return;
+          }
           debugPrint(
-            "Tapped ClusterInfoListItem ${cluster.clusterId}. Navigating to ClusterDetailScreen.",
+            "[ClusterInfoListItem onTap] Navigating to /cluster/${cluster.clusterId}",
           );
           context.push('/cluster/${cluster.clusterId}');
         },
@@ -43,7 +51,6 @@ class ClusterInfoListItem extends ConsumerWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Image Section
               SizedBox(
                 width: 90,
                 height: 90,
@@ -65,8 +72,7 @@ class ClusterInfoListItem extends ConsumerWidget {
                                     color: Colors.grey[500],
                                   ),
                                 ),
-                            memCacheHeight:
-                                180, // Optimize for typical display size
+                            memCacheHeight: 180,
                             memCacheWidth: 180,
                           )
                           : Container(
@@ -82,15 +88,11 @@ class ClusterInfoListItem extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 12),
-
-              // Text Section
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisAlignment:
-                      MainAxisAlignment.spaceBetween, // Distribute space
-                  mainAxisSize:
-                      MainAxisSize.min, // Crucial for fixed height in Row
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
                       headlineToShow,
@@ -112,21 +114,18 @@ class ClusterInfoListItem extends ConsumerWidget {
                               color: Colors.grey[600],
                             ),
                           ),
-                        const Spacer(), // Pushes chip to the right if date is short
+                        const Spacer(),
                         Chip(
                           label: Text(
                             "Story",
                             style: textTheme.bodySmall?.copyWith(
                               fontSize: 10,
-                              color:
-                                  theme
-                                      .colorScheme
-                                      .primary, // Use primary color for chip text
+                              color: theme.colorScheme.primary,
                             ),
                           ),
                           backgroundColor: theme.colorScheme.primary.withAlpha(
                             30,
-                          ), // Light primary background
+                          ),
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
                             vertical: 0,
