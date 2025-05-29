@@ -1,83 +1,96 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <!-- Main pages -->
+  <!-- Main pages (Shell Routes) -->
   <url>
-    <loc>https://tackle4loss.com/</loc>
-    <lastmod>2025-05-27</lastmod>
+    <loc>https://tackle4loss.com/app/news</loc>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
   </url>
+  <!-- Note: The root https://tackle4loss.com/ now redirects to /app/news, 
+       so /app/news is the canonical URL for the homepage content. 
+       If you want to list '/' as well, ensure it has a self-referencing canonical tag 
+       or is handled correctly by your redirect for SEO. For simplicity here, 
+       we list the target of the redirect. -->
   <url>
-    <loc>https://tackle4loss.com/news</loc>
-    <lastmod>2025-05-27</lastmod>
-    <changefreq>daily</changefreq>
-    <priority>0.9</priority>
-  </url>
-  <url>
-    <loc>https://tackle4loss.com/my-team</loc>
-    <lastmod>2025-05-27</lastmod>
+    <loc>https://tackle4loss.com/app/my-team</loc>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://tackle4loss.com/schedule</loc>
-    <lastmod>2025-05-27</lastmod>
+    <loc>https://tackle4loss.com/app/schedule</loc>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
+
+  <!-- Top-Level Auxiliary Pages -->
   <url>
     <loc>https://tackle4loss.com/all-news</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/teams</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/standings</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/settings</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.3</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/terms-privacy</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.2</priority>
   </url>
+  <url>
+    <loc>https://tackle4loss.com/impressum</loc>
+    <lastmod>2025-05-29</lastmod>
+    <changefreq>yearly</changefreq> 
+    <priority>0.2</priority>
+  </url>
+
+  <!-- Dynamic Content Route Patterns (Examples/Placeholders for understanding) -->
+  <!-- Actual article, cluster, and team detail URLs would be numerous and often 
+       handled by ensuring the pages themselves are well-linked and discoverable. 
+       You might list top articles/clusters if desired, or rely on internal linking.
+       For now, keeping the structure similar to before for team pages. -->
 
   <!-- AFC East Teams -->
   <url>
     <loc>https://tackle4loss.com/team/BUF</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/MIA</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/NE</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/NYJ</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -85,25 +98,25 @@
   <!-- AFC North Teams -->
   <url>
     <loc>https://tackle4loss.com/team/BAL</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/CIN</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/CLE</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/PIT</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -111,25 +124,25 @@
   <!-- AFC South Teams -->
   <url>
     <loc>https://tackle4loss.com/team/HOU</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/IND</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/JAC</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/TEN</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -137,25 +150,25 @@
   <!-- AFC West Teams -->
   <url>
     <loc>https://tackle4loss.com/team/DEN</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/KC</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/LV</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/LAC</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -163,25 +176,25 @@
   <!-- NFC East Teams -->
   <url>
     <loc>https://tackle4loss.com/team/DAL</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/NYG</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/PHI</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/WAS</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -189,25 +202,25 @@
   <!-- NFC North Teams -->
   <url>
     <loc>https://tackle4loss.com/team/CHI</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/DET</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/GB</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/MIN</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -215,25 +228,25 @@
   <!-- NFC South Teams -->
   <url>
     <loc>https://tackle4loss.com/team/ATL</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/CAR</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/NO</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/TB</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
@@ -241,25 +254,25 @@
   <!-- NFC West Teams -->
   <url>
     <loc>https://tackle4loss.com/team/ARI</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/LAR</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/SF</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   <url>
     <loc>https://tackle4loss.com/team/SEA</loc>
-    <lastmod>2025-05-27</lastmod>
+    <lastmod>2025-05-29</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
