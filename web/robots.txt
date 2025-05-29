@@ -1,5 +1,6 @@
 User-agent: *
 Allow: /
+Disallow: /app/more-placeholder/ # Disallow the placeholder page for the 'More' tab if it's not content
 
 # Sitemap
 Sitemap: https://tackle4loss.com/sitemap.xml

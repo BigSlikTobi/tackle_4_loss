@@ -188,6 +188,17 @@ class MoreOptionsSheetContent extends ConsumerWidget {
                   '/terms-privacy',
                 ),
           ),
+
+          _buildMoreListItem(
+            dialogContext: context,
+            appNavigatorContext: appNavigatorContextForNavigation,
+            icon: Icons.info_outline, // Or another suitable icon
+            title: 'Impressum / Imprint',
+            onTapAction:
+                () =>
+                    _navigateTo(appNavigatorContextForNavigation, '/impressum'),
+          ),
+
           if (_showSocialLinks) ...[
             const Divider(height: 32, indent: 24, endIndent: 24),
             Padding(

@@ -18,6 +18,7 @@ import 'package:tackle_4_loss/features/cluster_detail/ui/cluster_detail_screen.d
 import 'package:tackle_4_loss/features/news_feed/ui/cluster_article_detail_screen.dart';
 import 'package:tackle_4_loss/features/teams/data/team_info.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
+import 'package:tackle_4_loss/features/terms_privacy/ui/impressum_screen.dart';
 
 TeamInfo createTeamInfoFromId(String teamId) {
   final fullName = getTeamFullName(teamId);
@@ -256,6 +257,19 @@ final appRouter = GoRouter(
         return const TermsPrivacyScreen();
       },
     ),
+
+    GoRoute(
+      path: '/impressum',
+      name: 'impressum',
+      parentNavigatorKey: _rootNavigatorKey, // To make it a top-level page
+      builder: (context, state) {
+        debugPrint(
+          "[GoRouter TopLevelRoute /impressum] Building ImpressumScreen.",
+        );
+        return const ImpressumScreen();
+      },
+    ),
+
     GoRoute(
       path: '/article/:articleId',
       name: 'article-detail',

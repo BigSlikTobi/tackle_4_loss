@@ -13,39 +13,64 @@
 
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
-  <meta name="description" content="A new Flutter project.">
+  
+  <!-- Page Title - Crucial for SEO and browser tabs -->
+  <title>Tackle4Loss - Real-Time NFL News, Scores & In-Depth Analysis</title>
+
+  <!-- Meta Description - Snippet shown in search results -->
+  <meta name="description" content="Stay ahead of the game with Tackle4Loss! Get live NFL updates, breaking news, detailed team insights, schedules, standings, and unique story lines. Your ultimate source for American Football.">
+
+  <!-- Keywords (Optional - Google largely ignores this, but some other engines might not) -->
+  <meta name="keywords" content="NFL, American Football, football news, NFL scores, NFL schedule, NFL standings, team news, football analysis, sports news, Tackle4Loss">
+
+  <!-- Viewport settings - Essential for responsiveness -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
   <!-- iOS meta tags & icons -->
-  <meta name="mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black">
-  <meta name="apple-mobile-web-app-title" content="tackle_4_loss">
-  <link rel="apple-touch-icon" href="icons/Icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"> <!-- or black, or default -->
+  <meta name="apple-mobile-web-app-title" content="Tackle4Loss"> <!-- Consistent App Name -->
+  <link rel="apple-touch-icon" href="icons/Icon-192.png"> <!-- Default Apple touch icon -->
+  <!-- You can add more apple-touch-icon sizes if needed -->
+  <!-- e.g., <link rel="apple-touch-icon" sizes="180x180" href="icons/Icon-180.png"> -->
 
-  <!-- Favicon -->
-  <link rel="icon" type="image/png" sizes="32x32" href="favicon.png"/>
-  <link rel="icon" type="image/png" sizes="16x16" href="favicon.png"/>
-  <link rel="icon" type="image/png" sizes="192x192" href="icons/Icon-192.png"/>
-  <link rel="icon" type="image/png" sizes="512x512" href="icons/Icon-512.png"/>
 
-  <title>Tackle4Loss</title>
+  <!-- Favicon - Provide a range for different browsers/contexts -->
+  <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png"> <!-- Standard 32x32 favicon -->
+  <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png"> <!-- Standard 16x16 favicon -->
+  <link rel="shortcut icon" href="favicon.ico"> <!-- Fallback .ico for older browsers -->
+  
+  <!-- PWA Manifest - Links to your manifest.json for PWA capabilities -->
   <link rel="manifest" href="manifest.json">
+
+  <!-- Theme Color (for browser UI on mobile) -->
+  <meta name="theme-color" content="#20452B"> <!-- Match your primaryGreen from AppColors -->
+
 </head>
 <body>
+  <!-- This script installs service_worker.js to provide PWA functionality in
+       application code. For more information, see:
+       https://docs.flutter.dev/development/platform-integration/web-PWA -->
+  <!-- Ensure flutter.js is loaded after service worker registration for PWA scenarios -->
+
   <!-- Register Firebase Messaging service worker before Flutter loads -->
   <script>
     if ('serviceWorker' in navigator) {
+      // Ensure the path to firebase-messaging-sw.js is correct relative to your deployment root.
+      // If your app is served from a subdirectory, you might need to adjust this path.
+      // For root deployment, 'firebase-messaging-sw.js' is usually fine.
       navigator.serviceWorker
-        .register('firebase-messaging-sw.js')
-        .then(registration => {
-          console.log('FCM Service Worker registered:', registration);
+        .register('firebase-messaging-sw.js') // Make sure this file exists in your web output directory
+        .then(function(registration) {
+          console.log('FCM Service Worker registered with scope:', registration.scope);
         })
-        .catch(err => {
-          console.error('FCM SW registration failed:', err);
+        .catch(function(err) {
+          console.error('FCM Service Worker registration failed:', err);
         });
     }
   </script>
 
-  <!-- Flutter bootstrap script -->
+  <!-- Flutter bootstrap script - Loads your compiled Flutter app -->
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

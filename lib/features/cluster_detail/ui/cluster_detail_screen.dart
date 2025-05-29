@@ -220,8 +220,9 @@ class ClusterDetailScreen extends ConsumerWidget {
     } else if (overlayState['type'] == 'view') {
       viewData = overlayState['viewData'] as StoryLineViewData?;
       isLoading = viewData == null && overlayState['loading'] == true;
-      if (!isLoading && viewData == null)
+      if (!isLoading && viewData == null) {
         contentToShow = "Error loading content.";
+      }
     }
     final screenHeight = MediaQuery.of(context).size.height;
     final screenWidth = MediaQuery.of(context).size.width;
