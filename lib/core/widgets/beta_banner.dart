@@ -15,7 +15,7 @@ class BetaBanner extends ConsumerWidget {
     'en': {
       'title': 'Public Beta',
       'description': 'You\'re using a beta version of Tackle4Loss.',
-      'feedback': 'Share feedback and find the  @',
+      'feedback': 'Share feedback and find the iOS app @',
       'discord': '@ T4L Discord',
       'close': 'Close',
     },
