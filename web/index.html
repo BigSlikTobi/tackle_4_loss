@@ -46,6 +46,29 @@
   <!-- Theme Color (for browser UI on mobile) -->
   <meta name="theme-color" content="#20452B"> <!-- Match your primaryGreen from AppColors -->
 
+  <!-- Add or update canonical link dynamically -->
+  <script>
+    function updateCanonicalUrl() {
+      var canonicalUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      var link = document.querySelector("link[rel='canonical']");
+      if (link) {
+        link.setAttribute('href', canonicalUrl);
+      } else {
+        link = document.createElement('link');
+        link.setAttribute('rel', 'canonical');
+        link.setAttribute('href', canonicalUrl);
+        document.head.appendChild(link);
+      }
+      console.log('Canonical URL set/updated to:', canonicalUrl);
+    }
+    // Set canonical URL on initial load
+    updateCanonicalUrl();
+
+    // For SPAs, it's ideal if the router (GoRouter in your case)
+    // can trigger this update after each navigation.
+    // However, this initial script will set it based on the entry URL.
+    // Googlebot is generally good at picking up JS-driven canonical tag updates.
+  </script>
 </head>
 <body>
   <!-- This script installs service_worker.js to provide PWA functionality in
