@@ -140,7 +140,7 @@ class ArticleDetailScreen extends ConsumerWidget {
                               placeholder:
                                   (context, url) => Container(
                                     height: 250,
-                                    color: Colors.grey[200],
+                                    color: AppColors.grey200,
                                     child: const Center(
                                       child: LoadingIndicator(),
                                     ),
@@ -148,10 +148,10 @@ class ArticleDetailScreen extends ConsumerWidget {
                               errorWidget:
                                   (context, url, error) => Container(
                                     height: 250,
-                                    color: Colors.grey[200],
+                                    color: AppColors.grey200,
                                     child: Icon(
                                       Icons.broken_image_outlined,
-                                      color: Colors.grey[500],
+                                      color: AppColors.grey500,
                                       size: 40,
                                     ),
                                   ),
@@ -166,7 +166,7 @@ class ArticleDetailScreen extends ConsumerWidget {
                             child: Text(
                               article.sourceName ?? 'Unknown Source',
                               style: textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[600],
+                                color: AppColors.grey600,
                                 fontStyle: FontStyle.italic,
                               ),
                               overflow: TextOverflow.ellipsis,
@@ -179,7 +179,7 @@ class ArticleDetailScreen extends ConsumerWidget {
                                 localeCode,
                               ).format(article.createdAt!),
                               style: textTheme.bodySmall?.copyWith(
-                                color: Colors.grey[600],
+                                color: AppColors.grey600,
                               ),
                             ),
                         ],
@@ -240,7 +240,7 @@ class ArticleDetailScreen extends ConsumerWidget {
                           'Article content is not available.',
                           style: textTheme.bodyLarge?.copyWith(
                             fontStyle: FontStyle.italic,
-                            color: Colors.grey[600],
+                            color: AppColors.grey600,
                           ),
                         ),
                       const SizedBox(height: 24),

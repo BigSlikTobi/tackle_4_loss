@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:tackle_4_loss/core/providers/preference_provider.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart';
+import 'package:tackle_4_loss/core/theme/app_colors.dart';
 
 class TeamSelectionDropdown extends ConsumerWidget {
   const TeamSelectionDropdown({super.key});
@@ -61,8 +62,8 @@ class TeamSelectionDropdown extends ConsumerWidget {
           notifier.selectTeam(newTeamId);
         },
         // Basic styling
-        underline: Container(height: 1, color: Colors.grey[400]),
-        dropdownColor: Colors.white,
+        underline: Container(height: 1, color: AppColors.grey400),
+        dropdownColor: AppColors.white,
       ),
     );
   }
