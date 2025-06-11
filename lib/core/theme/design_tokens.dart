@@ -1,5 +1,6 @@
 /// Global design tokens for consistent styling across the app.
 /// Includes color, spacing, radii, and typography constants.
+library;
 
 import 'package:flutter/material.dart';
 

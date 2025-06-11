@@ -5,6 +5,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:tackle_4_loss/core/widgets/loading_indicator.dart';
 import 'package:tackle_4_loss/features/teams/data/player_injury.dart';
 import 'package:tackle_4_loss/features/teams/logic/injury_provider.dart';
+import 'package:tackle_4_loss/core/theme/app_colors.dart';
 
 class InjuryReportCard extends ConsumerWidget {
   final String teamId;
