@@ -18,14 +18,14 @@ class InjuryReportCard extends ConsumerWidget {
         statusUpper.contains("INJURY RESERVE") ||
         statusUpper.contains("NFI") ||
         statusUpper.contains("PUP")) {
-      return Colors.red.shade700;
+      return AppColors.red700;
     } else if (statusUpper.contains("DOUBTFUL")) {
-      return Colors.orange.shade800;
+      return AppColors.orange800;
     } else if (statusUpper.contains("QUESTIONABLE")) {
-      return Colors.amber.shade800;
+      return AppColors.amber800;
     }
     return Theme.of(context).textTheme.bodySmall?.color ??
-        Colors.grey; // Default
+        AppColors.grey500; // Default
   }
 
   @override
@@ -65,7 +65,7 @@ class InjuryReportCard extends ConsumerWidget {
             ),
             childrenPadding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
             iconColor: theme.colorScheme.primary,
-            collapsedIconColor: Colors.grey[700],
+            collapsedIconColor: AppColors.grey700,
             backgroundColor: theme.cardColor,
             collapsedBackgroundColor: theme.cardColor,
             shape: const Border(),
@@ -118,7 +118,7 @@ class InjuryReportCard extends ConsumerWidget {
                         child: Text(
                           "Unable to load injury data",
                           style: textTheme.bodyMedium?.copyWith(
-                            color: Colors.red[700],
+                            color: AppColors.red700,
                           ),
                         ),
                       ),
@@ -162,7 +162,7 @@ class InjuryReportCard extends ConsumerWidget {
                       fit: BoxFit.cover,
                       placeholder:
                           (context, url) => Container(
-                            color: Colors.grey[200],
+                            color: AppColors.grey200,
                             child: const Center(
                               child: SizedBox(
                                 width: 20,
@@ -175,19 +175,19 @@ class InjuryReportCard extends ConsumerWidget {
                           ),
                       errorWidget:
                           (context, url, error) => Container(
-                            color: Colors.grey[200],
+                            color: AppColors.grey200,
                             child: Icon(
                               Icons.person,
-                              color: Colors.grey[400],
+                              color: AppColors.grey400,
                               size: 24,
                             ),
                           ),
                     )
                     : Container(
-                      color: Colors.grey[200],
+                      color: AppColors.grey200,
                       child: Icon(
                         Icons.person,
-                        color: Colors.grey[400],
+                        color: AppColors.grey400,
                         size: 24,
                       ),
                     ),
@@ -236,7 +236,7 @@ class InjuryReportCard extends ConsumerWidget {
                     Text(
                       injury.formattedDate,
                       style: textTheme.bodySmall?.copyWith(
-                        color: Colors.grey[600],
+                        color: AppColors.grey600,
                       ),
                     ),
                 ],

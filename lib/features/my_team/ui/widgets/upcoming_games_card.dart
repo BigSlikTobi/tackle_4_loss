@@ -1,6 +1,7 @@
 // lib/features/my_team/ui/widgets/upcoming_games_card.dart
 import 'package:flutter/material.dart';
 import 'package:tackle_4_loss/core/constants/team_constants.dart'; // Import constants
+import 'package:tackle_4_loss/core/theme/app_colors.dart';
 
 class UpcomingGamesCard extends StatelessWidget {
   final String teamId;
@@ -32,7 +33,7 @@ class UpcomingGamesCard extends StatelessWidget {
         ),
         childrenPadding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 16.0),
         iconColor: theme.colorScheme.primary,
-        collapsedIconColor: Colors.grey[700],
+        collapsedIconColor: AppColors.grey700,
         backgroundColor: theme.cardColor,
         collapsedBackgroundColor: theme.cardColor,
         shape: const Border(),
@@ -68,7 +69,7 @@ class UpcomingGamesCard extends StatelessWidget {
           dateTime,
           style: Theme.of(
             context,
-          ).textTheme.bodySmall?.copyWith(color: Colors.grey[700]),
+          ).textTheme.bodySmall?.copyWith(color: AppColors.grey700),
         ),
       ],
     );

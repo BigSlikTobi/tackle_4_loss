@@ -72,13 +72,13 @@ class ClusterInfoGridItem extends ConsumerWidget {
                               fit: BoxFit.cover,
                               placeholder:
                                   (context, url) =>
-                                      Container(color: Colors.grey[200]),
+                                      Container(color: AppColors.grey200),
                               errorWidget:
                                   (context, url, error) => Container(
-                                    color: Colors.grey[200],
+                                    color: AppColors.grey200,
                                     child: Icon(
                                       Icons.broken_image_outlined,
-                                      color: Colors.grey[400],
+                                      color: AppColors.grey400,
                                       size: 30,
                                     ),
                                   ),
@@ -146,13 +146,13 @@ class ClusterInfoGridItem extends ConsumerWidget {
                   imageUrl: imageUrl,
                   fit: BoxFit.cover,
                   placeholder:
-                      (context, url) => Container(color: Colors.grey[200]),
+                      (context, url) => Container(color: AppColors.grey200),
                   errorWidget:
                       (context, url, error) => Container(
-                        color: Colors.grey[200],
+                        color: AppColors.grey200,
                         child: Icon(
                           Icons.broken_image_outlined,
-                          color: Colors.grey[400],
+                          color: AppColors.grey400,
                           size: 40,
                         ),
                       ),

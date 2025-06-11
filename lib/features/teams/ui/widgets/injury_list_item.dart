@@ -15,14 +15,14 @@ class InjuryListItem extends StatelessWidget {
         statusUpper.contains("INJURY RESERVE") ||
         statusUpper.contains("NFI") ||
         statusUpper.contains("PUP")) {
-      return Colors.red.shade700;
+      return AppColors.red700;
     } else if (statusUpper.contains("DOUBTFUL")) {
-      return Colors.orange.shade800;
+      return AppColors.orange800;
     } else if (statusUpper.contains("QUESTIONABLE")) {
-      return Colors.amber.shade800;
+      return AppColors.amber800;
     }
     return Theme.of(context).textTheme.bodySmall?.color ??
-        Colors.grey; // Default
+        AppColors.grey500; // Default
   }
 
   @override
@@ -54,27 +54,27 @@ class InjuryListItem extends StatelessWidget {
                           fit: BoxFit.cover,
                           placeholder:
                               (context, url) => Container(
-                                color: Colors.grey[200],
+                                color: AppColors.grey200,
                                 child: const LoadingIndicator(
                                   key: ValueKey('img_load'),
                                 ), // Key for potential testing
                               ),
                           errorWidget:
                               (context, url, error) => Container(
-                                color: Colors.grey[200],
+                                color: AppColors.grey200,
                                 child: Icon(
                                   Icons.person,
-                                  color: Colors.grey[400],
+                                  color: AppColors.grey400,
                                   size: 30,
                                 ),
                               ),
                         )
                         : Container(
                           // Fallback if no URL
-                          color: Colors.grey[200],
+                          color: AppColors.grey200,
                           child: Icon(
                             Icons.person,
-                            color: Colors.grey[400],
+                            color: AppColors.grey400,
                             size: 30,
                           ),
                         ),
@@ -127,7 +127,7 @@ class InjuryListItem extends StatelessWidget {
                         Text(
                           injury.formattedDate, // Use formatted date
                           style: textTheme.bodySmall?.copyWith(
-                            color: Colors.grey[600],
+                            color: AppColors.grey600,
                           ),
                         ),
                     ],
